@@ -24,6 +24,7 @@ from _lib.dob.yltc.read_yltc import process_dob_yltc_invoice_file
 from _lib.dob.sunquick.read_sunquick import process_dob_sunquick_invoice_file
 from _lib.dob.mamee.read_mamee import process_dob_mamee_invoice_file
 from _lib.dob.tohtonku.read_tohtonku import process_dob_tohtonku_invoice_file
+from _lib.dob.ecosafa.read_ecosafa import process_dob_ecosafa_invoice_file
 from _lib._kara.read_item_itemuom_kara import process_kara_invoice_file, process_kara_cn_file
 
 def get_file_type(file_path):
@@ -91,6 +92,8 @@ def upload_and_process_excel(request):
                         return process_dob_mamee_invoice_file(uploaded_file)
                     elif file_name == 'DOB_YLTC-INVOICE':
                         return process_dob_yltc_invoice_file(uploaded_file) 
+                    elif file_name == 'DOB_ECOSAFA-INVOICE':
+                        return process_dob_ecosafa_invoice_file(uploaded_file)
                     elif file_name == 'REDBULL-CN':
                         return process_redbull_cn_file(uploaded_file) 
                     elif file_name == 'DOB_TOHTONKU-INVOICE':

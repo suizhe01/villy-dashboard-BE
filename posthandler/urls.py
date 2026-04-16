@@ -13,9 +13,11 @@ post_kara_item_itemuom, post_kara_iv_ivdtl_invoice, post_kara_cn_cndtl,\
         post_dob_sunquick_item_itemuom, post_dob_sunquick_iv_ivdtl_invoice,\
         post_dob_mamee_item_itemuom,post_dob_mamee_iv_ivdtl_invoice,\
         post_dob_tohtonku_item_itemuom,post_dob_tohtonku_iv_ivdtl_invoice,\
+        post_dob_ecosafa_item_itemuom, post_dob_ecosafa_iv_ivdtl_invoice,\
                                             post_commission,\
                                             commission_add_lorry_crew_transaction,\
                                             calculate_commission,display_commission_by_crew_id, display_commission_by_crew_guid,display_commission_by_lorry_guid,\
+                                            get_employee_commission_details,\
                                             custom_get_crew,\
                                             custom_create_crew,\
                                             custom_delete_crew, custom_delete_transaction,\
@@ -92,6 +94,10 @@ urlpatterns = [
     path('post_dob_tohtonku_item_itemuom/', post_dob_tohtonku_item_itemuom, name='post_dob_tohtonku_item_itemuom'),
     path('post_dob_tohtonku_iv_ivdtl_invoice/', post_dob_tohtonku_iv_ivdtl_invoice, name='post_dob_tohtonku_iv_ivdtl_invoice'),
 
+    # dob ecosafa
+    path('post_dob_ecosafa_item_itemuom/', post_dob_ecosafa_item_itemuom, name='post_dob_ecosafa_item_itemuom'),
+    path('post_dob_ecosafa_iv_ivdtl_invoice/', post_dob_ecosafa_iv_ivdtl_invoice, name='post_dob_ecosafa_iv_ivdtl_invoice'),
+
     
     # commission
     path('post_commission/', post_commission, name='post_commission'),
@@ -101,6 +107,7 @@ urlpatterns = [
     path('display_commission_by_crew_id/', display_commission_by_crew_id, name='display_commission_by_crew_id'),
     path('display_commission_by_crew_guid/', display_commission_by_crew_guid, name='display_commission_by_crew_guid'),
     path('display_commission_by_lorry_guid/', display_commission_by_lorry_guid, name='display_commission_by_lorry_guid'),
+    path('get_employee_commission_details/', get_employee_commission_details, name='get_employee_commission_details'),
     path('export_crew/', export_crew, name='export_crew'),
     
     # custom get

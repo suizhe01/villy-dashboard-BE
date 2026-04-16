@@ -2,6 +2,7 @@ from django.shortcuts import render
 from rest_framework.decorators import api_view
 from rest_framework.response import Response
 from rest_framework import status
+from rest_framework.pagination import PageNumberPagination
 from django.http import JsonResponse
 from datetime import datetime
 from iv.models import IV
@@ -2195,14 +2196,95 @@ def post_dob_mamee_iv_ivdtl_invoice(request):
             # response_list.append({'item_code': item_code, 'status': 'success'})
         return JsonResponse({'request': 'POST', 'response': 'success', 'status': status.HTTP_201_CREATED}, safe=False, status=status.HTTP_201_CREATED)
 
+
+################################# DOB ECOSAFA #################################
+from _lib.dob.ecosafa.post_item_itemuom_dob_ecosafa import create_dob_ecosafa_item_iteuom
+from _lib.dob.ecosafa.post_iv_ivdtl_dob_ecosafa import create_dob_ecosafa_iv_ivdtl_invoice
+
+@api_view(['POST'])
+def post_dob_ecosafa_item_itemuom(request):
+    if request.method == 'POST':
+        data = request.data
+        if not isinstance(data, list):
+            return JsonResponse({'error': 'Invalid data format. Expected a list of JSON objects.'}, status=status.HTTP_400_BAD_REQUEST)
+
+        for item in data:
+            trigger_file_type = item.get('trigger_file_type')
+
+            if trigger_file_type == 'Invoice':
+                itemcode = item.get('item_code')
+                description = item.get('description')
+                uom = item.get('uom')
+                rate = item.get('rate')
+                price = item.get('price')
+                unit_uom = item.get('unit_uom')
+                unit_price = item.get('unit_price')
+                unit_rate = item.get('unit_rate')
+
+                create_dob_ecosafa_item_iteuom(itemcode, description, uom, price, rate, unit_uom, unit_price, unit_rate)
+
+        return JsonResponse({'request': 'POST', 'response': 'success', 'status': status.HTTP_201_CREATED}, safe=False, status=status.HTTP_201_CREATED)
+
+@api_view(['POST'])
+def post_dob_ecosafa_iv_ivdtl_invoice(request):
+    if request.method == 'POST':
+        data = request.data
+        if not isinstance(data, list):
+            return JsonResponse({'error': 'Invalid data format. Expected a list of JSON objects.'}, status=status.HTTP_400_BAD_REQUEST)
+
+        tempcompanyautokey = Company.objects.filter(name='Villy').first()
+        branchautokey = Branch.objects.filter(address__contains='NA').first()
+        location = Location.objects.filter(location='NA').first()
+        temporary_display_term = Terms.objects.first()
+        lorry_driver = 'NA'
+        udf_book = '3'
+        previous_invoice_no = ''
+        seq = 1
+        delete = True
+
+        for index, item in enumerate(data):
+            debtor_code = item.get('debtor_code')
+            debtor_name = item.get('debtor_name')
+            invoice_no = item.get('invoice_no')
+            invoice_date = item.get('invoice_date')
+            item_code = item.get('item_code')
+            description = item.get('description')
+            rate = item.get('rate')
+            quantity = item.get('quantity')
+            uom = item.get('uom')
+
+            if previous_invoice_no == '':
+                previous_invoice_no = invoice_no
+
+            if previous_invoice_no != invoice_no:
+                delete = True
+                previous_invoice_no = invoice_no
+                seq = 1
+
+            if delete == True:
+                filter_header_iv = IV.objects.filter(docno=invoice_no).first()
+                if filter_header_iv:
+                    filter_child_iv = IVDTL.objects.filter(headerautokey=filter_header_iv)
+                    if filter_child_iv.exists():
+                        filter_child_iv.delete()
+                        filter_header_iv.delete()
+                        delete = False
+                else:
+                    delete = False
+
+            create_dob_ecosafa_iv_ivdtl_invoice(debtor_code, debtor_name, invoice_no, item_code, invoice_date, quantity, rate, uom, seq, tempcompanyautokey, branchautokey, location, temporary_display_term, lorry_driver, udf_book, description)
+            seq += 1
+
+        return JsonResponse({'request': 'POST', 'response': 'success', 'status': status.HTTP_201_CREATED}, safe=False, status=status.HTTP_201_CREATED)
+
+
 @api_view(['POST'])
 def post_commission(request):
     if request.method == 'POST':
         data = request.data
         if not isinstance(data, list):
             return JsonResponse({'error': 'Invalid data format. Expected a list of JSON objects.'}, status=status.HTTP_400_BAD_REQUEST)
-        CrewRateDtl.objects.all().delete()
-        CrewRate.objects.all().delete()
+        # Upsert mode: no longer deleting all records. post_commission_template handles update-or-create per employee.
 
         filter_sundry_m = CommissionItemClass.objects.filter(itemclassguid__itemclass="SUNDRY($)").first()
         filter_dob_m = CommissionItemClass.objects.filter(itemclassguid__itemclass="DOB($)").first()
@@ -2221,6 +2303,7 @@ def post_commission(request):
         filter_mamypoko_m = CommissionItemClass.objects.filter(itemclassguid__itemclass="MAMYPOKO($)").first()
         filter_dksh_m = CommissionItemClass.objects.filter(itemclassguid__itemclass="DKSH($)").first()
         filter_sunquick_q = CommissionItemClass.objects.filter(itemclassguid__itemclass="SUNQUICK(Q)").first()
+        filter_ecosafa_q = CommissionItemClass.objects.filter(itemclassguid__itemclass="ECOSAFA(Q)").first()
 
         for index,item in enumerate(data):
             employee_id = item.get('employee_id')
@@ -2244,11 +2327,58 @@ def post_commission(request):
             mamypoko_m = item.get('MAMYPOKO($)')
             dksh_m = item.get('DKSH($)')
             sunquick_q = item.get('SUNQUICK(Q)')
+            ecosafa_q = item.get('ECOSAFA(Q)')
 
-            post_commission_template(employee_id,crew_name, crew_type,car_plate, sundry_m,dob_m,rb_q,yltc_q,le_q,cheers_q,rbpallet_q,sajioil_q,sajioilpallet_q,sajisweet_q,sajisweetpallet_q,dutchlady_m,lipton_m,mamee_m,mamypoko_m,dksh_m,sunquick_q,filter_sundry_m,filter_dob_m,filter_rb_q,filter_yltc_q,filter_le_q,filter_cheers_q,filter_rbpallet_q,filter_sajioil_q,filter_sajioilpallet_q,filter_sajisweet_q,filter_sajisweetpallet_q,filter_dutchlady_m,filter_lipton_m,filter_mamee_m,filter_mamypoko_m,filter_dksh_m,filter_sunquick_q)
+            post_commission_template(employee_id,crew_name, crew_type,car_plate, sundry_m,dob_m,rb_q,yltc_q,le_q,cheers_q,rbpallet_q,sajioil_q,sajioilpallet_q,sajisweet_q,sajisweetpallet_q,dutchlady_m,lipton_m,mamee_m,mamypoko_m,dksh_m,sunquick_q,ecosafa_q,filter_sundry_m,filter_dob_m,filter_rb_q,filter_yltc_q,filter_le_q,filter_cheers_q,filter_rbpallet_q,filter_sajioil_q,filter_sajioilpallet_q,filter_sajisweet_q,filter_sajisweetpallet_q,filter_dutchlady_m,filter_lipton_m,filter_mamee_m,filter_mamypoko_m,filter_dksh_m,filter_sunquick_q,filter_ecosafa_q)
         
 
         return JsonResponse({'request': 'POST', 'response': 'success', 'status': status.HTTP_201_CREATED}, safe=False, status=status.HTTP_201_CREATED)
+
+class CommissionRatePagination(PageNumberPagination):
+    page_size = 20
+    page_size_query_param = 'page_size'
+    max_page_size = 100
+
+@api_view(['GET'])
+def get_employee_commission_details(request):
+    crew_name_filter = request.query_params.get('crew_name', None)
+
+    crewrates = CrewRate.objects.all().order_by('crewname')
+
+    # Filter by crew_name if provided (case-insensitive)
+    if crew_name_filter:
+        crewrates = crewrates.filter(crewname__icontains=crew_name_filter)
+
+    result = []
+    for crewrate in crewrates:
+        dtls = CrewRateDtl.objects.filter(
+            crewrateguid=crewrate
+        ).select_related('commissionitemclassguid__itemclassguid')
+
+        # Group rates by crew_type
+        crew_type_map = {}
+        for dtl in dtls:
+            crew_type = dtl.crewtype
+            item_class_name = dtl.commissionitemclassguid.itemclassguid.itemclass
+            comm_value = float(dtl.commvalue) if dtl.commvalue else 0
+
+            # ($) classes stored as decimals (e.g. 0.005), convert to % (e.g. 0.5)
+            if '($)' in item_class_name:
+                comm_value = round(comm_value * 100, 4)
+
+            if crew_type not in crew_type_map:
+                crew_type_map[crew_type] = {
+                    'employee_id': crewrate.crewid,
+                    'crew_name': crewrate.crewname,
+                    'crew_type': crew_type,
+                }
+            crew_type_map[crew_type][item_class_name] = comm_value
+
+        result.extend(crew_type_map.values())
+
+    paginator = CommissionRatePagination()
+    page = paginator.paginate_queryset(result, request)
+    return paginator.get_paginated_response(page)
 
 @api_view(['POST'])
 def commission_add_lorry_crew_transaction(request):

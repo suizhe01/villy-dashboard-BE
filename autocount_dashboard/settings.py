@@ -147,7 +147,8 @@ MIDDLEWARE = [
 ]
 
 DEBUG_TOOLBAR_CONFIG = {
-    'SHOW_TOOLBAR_CALLBACK': lambda request: True,  # Always show the toolbar
+    # Only show toolbar for HTML requests, not API requests (to avoid crashes with large SQL logs)
+    'SHOW_TOOLBAR_CALLBACK': lambda request: DEBUG and 'text/html' in request.META.get('HTTP_ACCEPT', ''),
 }
 
 ROOT_URLCONF = 'autocount_dashboard.urls'

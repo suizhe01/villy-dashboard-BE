@@ -1,0 +1,16 @@
+# Excel files
+*.xlsx
+*.xls
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+
+# Environment
+env/
+.env
+
+# Django
+*.log
+db.sqlite3

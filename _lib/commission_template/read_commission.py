@@ -10,10 +10,13 @@ def process_commission_file(dataframe):
     # item_uom_dict = {(item.itemcode.itemcode, item.uom): item for item in ItemUOM.objects.select_related('itemcode').all()}
 
     with pd.option_context('display.max_row', None):
-        selected_columns = dataframe[['CODE','NAME','DRIVER','CARPLATE','SUNDRY($)','DOB($)','RB(Q)','YLTC(Q)','LE(Q)','CHEERS(Q)','RBPALLET(Q)','SAJIOIL(Q)','SAJIOILPALLET(Q)','SAJISWEET(Q)','SAJISWEETPALLET(Q)','DUTCHLADY($)','LIPTON($)','MAMEE($)','MAMYPOKO($)','DKSH($)','SUNQUICK(Q)']]
+        selected_columns = dataframe[['CODE','NAME','DRIVER','CARPLATE','SUNDRY($)','DOB($)','RB(Q)','YLTC(Q)','LE(Q)','CHEERS(Q)','RBPALLET(Q)','SAJIOIL(Q)','SAJIOILPALLET(Q)','SAJISWEET(Q)','SAJISWEETPALLET(Q)','DUTCHLADY($)','LIPTON($)','MAMEE($)','MAMYPOKO($)','DKSH($)','SUNQUICK(Q)','ECOSAFA(Q)']]
 
         for index, row in selected_columns.iterrows():
-            employee_id = str(row['CODE']).zfill(4)
+            raw_code = row['CODE']
+            if pd.isna(raw_code) or str(raw_code).strip() == '':
+                continue
+            employee_id = str(raw_code).zfill(4)
             crew_name = row['NAME']
             driver = row['DRIVER']
             car_plate = row['CARPLATE']
@@ -34,18 +37,18 @@ def process_commission_file(dataframe):
             mamypoko_m = row['MAMYPOKO($)']
             sunquick_q = row['SUNQUICK(Q)']
             dksh_m = row['DKSH($)']
+            ecosafa_q = row['ECOSAFA(Q)']
 
             if pd.isna(car_plate):
                 car_plate = ""
 
 
-            if not pd.isna(employee_id):
-                if driver == 1:
-                    crew_type = 'Driver'
-                else:
-                    crew_type = 'Assistant'
+            if driver == 1:
+                crew_type = 'Driver'
+            else:
+                crew_type = 'Assistant'
 
-                commission['commission'].append({
+            commission['commission'].append({
                     'employee_id': employee_id,
                     'crew_name': crew_name,
                     'crew_type': crew_type,
@@ -66,7 +69,8 @@ def process_commission_file(dataframe):
                     'SAJISWEET(Q)': sajisweet_q,
                     'SAJISWEETPALLET(Q)': sajisweet_pallet_q,
                     'SUNQUICK(Q)': sunquick_q,
-                    'DUTCHLADY($)': dutchlady_m
+                    'DUTCHLADY($)': dutchlady_m,
+                    'ECOSAFA(Q)': ecosafa_q
                 })
                 
 

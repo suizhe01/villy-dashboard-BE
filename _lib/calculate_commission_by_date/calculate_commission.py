@@ -257,7 +257,7 @@ def create_crewdtl(start_date, end_date):
         INNER JOIN autocount_dashboard.lorry AS c
             on b.lorryguid = c.lorryguid
         WHERE c.docdate BETWEEN %s AND %s
-        AND NOT (a.subtotal <= 0 AND itemclass NOT IN ('SUNQUICK(Q)', 'SUNDRY($)', 'CHEERS(Q)'))
+        AND NOT (a.subtotal <= 0 AND itemclass NOT IN ('SUNQUICK(Q)', 'SUNDRY($)', 'CHEERS(Q)', 'ECOSAFA(Q)'))
         GROUP BY b.Share,a.itemclass, c.lorryguid, a.UdfCalMethod, a.UdfCalRate, a.CommType;
     """
 
@@ -278,7 +278,7 @@ def create_crewdtl(start_date, end_date):
         udf_calrate = result[6]
         comm_type = result[7]
 
-        if item_class != 'SUNQUICK(Q)' and item_class != 'CHEERS(Q)':
+        if item_class != 'SUNQUICK(Q)' and item_class != 'CHEERS(Q)' and item_class != 'ECOSAFA(Q)':
             if total_amount > 0:
                 # print(item_class)
 
