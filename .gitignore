@@ -1,6 +1,7 @@
-# Excel files
+# Excel and CSV files
 *.xlsx
 *.xls
+*.csv
 
 # Python
 __pycache__/
