@@ -19,26 +19,33 @@ def list_report(lorry_number, document_date, employee_details, invoice_list_no, 
     docno_list = tuple(invoice_list_no)
 
     query = """
-    SELECT 
+    SELECT
         a.uom,
-        c.CompanyName as "Outlet Name", 
-        b.DebtorCode, 
-        b.DocNo, 
+        c.CompanyName as "Outlet Name",
+        b.DebtorCode,
+        b.DocNo,
         a.commtype,
-        CASE 
-            WHEN a.commtype = '$' THEN a.itemclass 
-            ELSE 'N/A' 
+        CASE
+            WHEN a.commtype = '$' THEN a.itemclass
+            ELSE 'N/A'
         END as itemclass,
-        SUM(qty) AS qty, 
-        SUM(subtotal) AS subtotal
+        SUM(qty) AS qty,
+        SUM(subtotal) AS subtotal,
+        a.itemclass as raw_itemclass
     FROM autocount_dashboard.transactiondtl a
     INNER JOIN autocount_dashboard.transaction b ON a.transactionguid = b.transactionguid
     INNER JOIN autocount_dashboard.debtor c ON b.DebtorCode = c.AccNo
     INNER JOIN autocount_dashboard.lorry d ON b.lorryguid = d.lorryguid
     WHERE b.docno IN %s AND d.docdate LIKE %s
-    GROUP BY 
+    AND (
+        a.subtotal > 0
+        OR a.itemclass IN ('SUNQUICK(Q)', 'SUNDRY($)', 'CHEERS(Q)', 'ECOSAFA(Q)')
+        OR (a.commtype = '$' AND a.qty > 0)
+    )
+    GROUP BY
         c.CompanyName, b.DebtorCode, b.DocNo, a.commtype, a.uom,
-        CASE WHEN a.commtype = '$' THEN a.itemclass ELSE 'N/A' END;
+        CASE WHEN a.commtype = '$' THEN a.itemclass ELSE 'N/A' END,
+        a.itemclass;
     """
     if 'T' in document_date:
         document_date = document_date.replace('T', ' ')
@@ -58,24 +65,27 @@ def list_report(lorry_number, document_date, employee_details, invoice_list_no, 
         "ctn_parts": []
     })
 
+    sql_exception_classes = {'SUNQUICK(Q)', 'SUNDRY($)', 'CHEERS(Q)', 'ECOSAFA(Q)'}
+
     for row in rows:
-        uom, outlet_name, debtor_code, docno, commtype, itemclass, qty, subtotal = row
-        if subtotal:
+        uom, outlet_name, debtor_code, docno, commtype, itemclass, qty, subtotal, raw_itemclass = row
+        is_ecosafa = raw_itemclass == 'ECOSAFA(Q)'
+        is_exception = raw_itemclass in sql_exception_classes
+
+        if subtotal or is_exception or (commtype == '$' and qty and qty > 0):
             group = grouped[docno]
             group["outlet name"] = outlet_name
             group["debtor code"] = debtor_code
             group["document number"] = docno
 
-            if commtype == "%":
-                group["amount"] += subtotal
-            if commtype == "$" and itemclass != "N/A":
-                group["ctn_parts"].append(f"{int(qty)} {itemclass}")
-                # if uom == 'UNT':
-                #     if qty >= 6:
-                #         qty = int(qty)/6
-                #         group["ctn_parts"].append(f"{int(qty)} {itemclass}")
-                # else:
-                #     group["ctn_parts"].append(f"{int(qty)} {itemclass}")
+            if is_ecosafa:
+                if qty:
+                    group["ctn_parts"].append(f"{int(qty)} ECOSAFA(Q)")
+            else:
+                if commtype == "%":
+                    group["amount"] += subtotal
+                if commtype == "$" and itemclass != "N/A" and qty and qty > 0:
+                    group["ctn_parts"].append(f"{int(qty)} {itemclass}")
 
     final_rows = []
     for doc in grouped.values():

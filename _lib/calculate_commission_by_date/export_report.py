@@ -10,9 +10,9 @@ from openpyxl.styles import Alignment
 def export_report_by_date(start_date, end_date):
     fixed_headers = [
     'SUNDRY($)', 'DOB($)', 'LIPTON($)', 'MAMEE($)', 'MAMYPOKO($)', 'DKSH($)',
-    'RB(Q)', 'YLTC(Q)', 'LE(Q)','CHEERS(Q)', 'RB PALLET(Q)',
+    'RB(Q)', 'YLTC(Q)', 'LE(Q)', 'CHEERS(Q)', 'RB PALLET(Q)',
     'SAJIOIL(Q)', 'SAJIOILPALLET(Q)', 'SAJISWEET(Q)', 'SAJISWEETPALLET(Q)',
-    'SUNQUICK(Q)', 'DUTCHLADY($)'
+    'SUNQUICK(Q)', 'ECOSAFA(Q)', 'KARA($)', 'KARA PALLET($)'
     ]
 
     # Query to count numbers of people in each lorry
@@ -131,7 +131,7 @@ def export_report_by_date(start_date, end_date):
         ws.cell(row=payout_row, column=1, value="TOTAL PAYOUT").font = Font(bold=True)
 
         # Merge payout amount cell across columns C to S (columns 3 to 19)
-        ws.merge_cells(start_row=payout_row, start_column=3, end_row=payout_row, end_column=19)
+        ws.merge_cells(start_row=payout_row, start_column=3, end_row=payout_row, end_column=2 + len(fixed_headers))
 
         # Calculate sum of Total Commission row (comm_row)
         start_col = get_column_letter(3)

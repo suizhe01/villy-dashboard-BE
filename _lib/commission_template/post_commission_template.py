@@ -4,7 +4,7 @@ from django.db import transaction
 from _lib.panda import panda_uuid
 from lorryplate.models import LorryPlate
 
-def post_commission_template(employee_id,crew_name, crew_type,car_plate, sundry_m,dob_m,rb_q,yltc_q,le_q,cheers_q,rbpallet_q,sajioil_q,sajioilpallet_q,sajisweet_q,sajisweetpallet_q,dutchlady_m,lipton_m,mamee_m,mamypoko_m,dksh_m,sunquick_q,ecosafa_q,filter_sundry_m,filter_dob_m,filter_rb_q,filter_yltc_q,filter_le_q,filter_cheers_q,filter_rbpallet_q,filter_sajioil_q,filter_sajioilpallet_q,filter_sajisweet_q,filter_sajisweetpallet_q,filter_dutchlady_m,filter_lipton_m,filter_mamee_m,filter_mamypoko_m,filter_dksh_m,filter_sunquick_q,filter_ecosafa_q):
+def post_commission_template(employee_id,crew_name, crew_type,car_plate, sundry_m,dob_m,rb_q,yltc_q,le_q,cheers_q,rbpallet_q,sajioil_q,sajioilpallet_q,sajisweet_q,sajisweetpallet_q,lipton_m,mamee_m,mamypoko_m,dksh_m,sunquick_q,ecosafa_q,kara_m,kara_pallet_m,filter_sundry_m,filter_dob_m,filter_rb_q,filter_yltc_q,filter_le_q,filter_cheers_q,filter_rbpallet_q,filter_sajioil_q,filter_sajioilpallet_q,filter_sajisweet_q,filter_sajisweetpallet_q,filter_lipton_m,filter_mamee_m,filter_mamypoko_m,filter_dksh_m,filter_sunquick_q,filter_ecosafa_q,filter_kara_m,filter_kara_pallet_m):
     filter_lorry_plate = LorryPlate.objects.filter(lorrynumber=car_plate)
     if not filter_lorry_plate:
         new_lorry_plate = LorryPlate(lorrynumber=car_plate)
@@ -35,13 +35,14 @@ def post_commission_template(employee_id,crew_name, crew_type,car_plate, sundry_
         (filter_sajioilpallet_q, sajioilpallet_q),
         (filter_sajisweet_q, sajisweet_q),
         (filter_sajisweetpallet_q, sajisweetpallet_q),
-        (filter_dutchlady_m, dutchlady_m),
         (filter_lipton_m, lipton_m),
         (filter_mamee_m, mamee_m),
         (filter_mamypoko_m, mamypoko_m),
         (filter_dksh_m, dksh_m),
         (filter_sunquick_q, sunquick_q),
         (filter_ecosafa_q, ecosafa_q),
+        (filter_kara_m, kara_m),
+        (filter_kara_pallet_m, kara_pallet_m),
     ]
 
     for filter_itemclass, comm_value in commission_rates:

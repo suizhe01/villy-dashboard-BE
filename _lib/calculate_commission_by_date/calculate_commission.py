@@ -179,7 +179,8 @@ def update_transactiondtl_ispallet_itemclass(start_date, end_date):
     INNER JOIN autocount_dashboard.lorry AS c
         on b.lorryguid = c.lorryguid
     WHERE c.docdate BETWEEN %s AND %s
-    AND b.UdfIsPallet>'0' AND a.UdfIsPallet >'0';
+    AND b.UdfIsPallet>'0' AND a.UdfIsPallet >'0'
+    AND a.itemclass = 'RB(Q)';
     """
 
     with connection.cursor() as cursor:
@@ -191,10 +192,37 @@ def update_transactiondtl_ispallet_itemclass(start_date, end_date):
         for pallet in update_ispallet_itemclass:
             transactiondtlguid = pallet[0]
             update_transactiondtl_ispallet_itemclass.append((transactiondtlguid))
-    
+
     if update_transactiondtl_ispallet_itemclass:
         for transactiondtlguid in update_transactiondtl_ispallet_itemclass:
             TransactionDtl.objects.filter(transactiondtlguid=transactiondtlguid).update(itemclass='RB PALLET(Q)')
+
+def update_transactiondtl_kara_ispallet_itemclass(start_date, end_date):
+    query = """
+    SELECT TransactionDtlGuid
+    FROM autocount_dashboard.transactiondtl AS a
+    INNER JOIN autocount_dashboard.transaction AS b
+        ON a.transactionguid = b.TransactionGuid
+    INNER JOIN autocount_dashboard.lorry AS c
+        on b.lorryguid = c.lorryguid
+    WHERE c.docdate BETWEEN %s AND %s
+    AND b.UdfIsPallet>'0' AND a.UdfIsPallet >'0'
+    AND a.itemclass = 'KARA($)';
+    """
+
+    with connection.cursor() as cursor:
+        cursor.execute(query, [start_date, end_date])
+        update_kara_ispallet_itemclass = cursor.fetchall()
+
+    update_transactiondtl_kara_ispallet_itemclass = []
+    if update_kara_ispallet_itemclass:
+        for pallet in update_kara_ispallet_itemclass:
+            transactiondtlguid = pallet[0]
+            update_transactiondtl_kara_ispallet_itemclass.append((transactiondtlguid))
+
+    if update_transactiondtl_kara_ispallet_itemclass:
+        for transactiondtlguid in update_transactiondtl_kara_ispallet_itemclass:
+            TransactionDtl.objects.filter(transactiondtlguid=transactiondtlguid).update(itemclass='KARA PALLET($)')
 
 def update_transactiondtl_qty(start_date, end_date):
     query = """
@@ -250,15 +278,20 @@ def delete_crewdtl(start_date, end_date):
 
 def create_crewdtl(start_date, end_date):
     query_add_crewdtl = """
-        SELECT itemclass,SUM(qty), sum(SubTotal), c.lorryguid, b.share, a.UdfCalMethod, a.UdfCalRate,a.CommType
+        SELECT itemclass, SUM(qty), SUM(SubTotal), c.lorryguid, b.share,
+               MAX(a.UdfCalMethod), MAX(a.UdfCalRate), a.CommType
         FROM autocount_dashboard.transactiondtl AS a
         INNER JOIN autocount_dashboard.transaction AS b
             ON a.transactionguid = b.TransactionGuid
         INNER JOIN autocount_dashboard.lorry AS c
             on b.lorryguid = c.lorryguid
         WHERE c.docdate BETWEEN %s AND %s
-        AND NOT (a.subtotal <= 0 AND itemclass NOT IN ('SUNQUICK(Q)', 'SUNDRY($)', 'CHEERS(Q)', 'ECOSAFA(Q)'))
-        GROUP BY b.Share,a.itemclass, c.lorryguid, a.UdfCalMethod, a.UdfCalRate, a.CommType;
+        AND (
+            a.subtotal > 0
+            OR itemclass IN ('SUNQUICK(Q)', 'SUNDRY($)', 'CHEERS(Q)', 'ECOSAFA(Q)')
+            OR (a.CommType = '$' AND a.qty > 0)
+        )
+        GROUP BY b.Share, a.itemclass, c.lorryguid, a.CommType;
     """
 
     add_new_crewdtl = []
@@ -266,9 +299,8 @@ def create_crewdtl(start_date, end_date):
     with connection.cursor() as cursor:
         cursor.execute(query_add_crewdtl, [start_date, end_date])
         crewdtl_results = cursor.fetchall()
-    
+
     for result in crewdtl_results:
-        # uom = result[0]
         item_class = result[0]
         total_qty = result[1]
         total_amount = result[2]
@@ -279,27 +311,23 @@ def create_crewdtl(start_date, end_date):
         comm_type = result[7]
 
         if item_class != 'SUNQUICK(Q)' and item_class != 'CHEERS(Q)' and item_class != 'ECOSAFA(Q)':
-            if total_amount > 0:
-                # print(item_class)
-
+            if total_amount > 0 or (comm_type == '$' and total_qty and total_qty > 0):
                 filter_crew = Crew.objects.filter(lorryguid=lorry_guid)
                 if filter_crew:
                     for crew in filter_crew:
                         crew_guid = crew.crewguid
-                        filter_crewdtl = Crewdtl.objects.filter(crewguid=crew_guid,itemclass=item_class)
+                        filter_crewdtl = Crewdtl.objects.filter(crewguid=crew_guid, itemclass=item_class)
                         if not filter_crewdtl:
                             crewguid_instance = Crew.objects.get(crewguid=crew_guid)
                             item_class_instance = ItemClass.objects.get(itemclass=item_class)
                             new_crewdtl = Crewdtl(crewdtlguid=panda_uuid(),crewguid=crewguid_instance, itemclass=item_class_instance,totalqty=total_qty,totalamount=total_amount,share=share,udfcalmethod=udf_calmethod, udfcalrate=udf_calrate, commtype=comm_type)
                             add_new_crewdtl.append(new_crewdtl)
-                            # print(lorry_guid,crew_guid)
         else:
-            # print(item_class)
             filter_crew = Crew.objects.filter(lorryguid=lorry_guid)
             if filter_crew:
                 for crew in filter_crew:
                     crew_guid = crew.crewguid
-                    filter_crewdtl = Crewdtl.objects.filter(crewguid=crew_guid,itemclass=item_class)
+                    filter_crewdtl = Crewdtl.objects.filter(crewguid=crew_guid, itemclass=item_class)
                     if not filter_crewdtl:
                         crewguid_instance = Crew.objects.get(crewguid=crew_guid)
                         item_class_instance = ItemClass.objects.get(itemclass=item_class)
@@ -371,7 +399,7 @@ def calculation_for_document_sum(start_date, end_date):
 
     # Query to get crewdtl value for calculation
     query_crewdtl_calculation = """
-        SELECT crewdtlguid, commtype, commvalue, totalamount, totalqty, share, b.lorryguid, a.calculatedcomm
+        SELECT crewdtlguid, commtype, commvalue, totalamount, totalqty, share, b.lorryguid, a.calculatedcomm, a.itemclass
         FROM autocount_dashboard.crewdtl AS a
         INNER JOIN autocount_dashboard.crew AS b
             ON a.crewguid = b.CrewGuid
@@ -383,16 +411,16 @@ def calculation_for_document_sum(start_date, end_date):
     # Execute the queries
     with connection.cursor() as cursor:
         cursor.execute(query_people_in_lorry, [start_date, end_date])
-        people_in_lorry_table = cursor.fetchall()  
+        people_in_lorry_table = cursor.fetchall()
 
         cursor.execute(query_crewdtl_calculation, [start_date, end_date])
-        crewdtl_calculation_table = cursor.fetchall()  
+        crewdtl_calculation_table = cursor.fetchall()
 
     people_dict = {item[0]: (item[1]) for item in people_in_lorry_table}
-    
+
     update_calculated_comm = []
     for crewdtl in crewdtl_calculation_table:
-        crewdtlguid, commtype, commvalue, totalamount, totalqty, share, lorryguid, calculatedcomm = crewdtl
+        crewdtlguid, commtype, commvalue, totalamount, totalqty, share, lorryguid, calculatedcomm, itemclass = crewdtl
 
         number_of_people_in_lorry = people_dict[lorryguid]
         if not calculatedcomm:
@@ -410,7 +438,6 @@ def calculation_for_document_sum(start_date, end_date):
                         update_calculated_comm.append((crewdtlguid,calculated_comm,totalamount,totalqty))
                 elif number_of_people_in_lorry == 3:
                     totalamount = ((totalamount*2)/3)
-                    # if lorryguid == :
                     totalqty = ((totalqty*2)/3)
                     if commtype == '%':
                         calculated_comm = round((commvalue * totalamount),2)
@@ -489,6 +516,8 @@ def calculate_commission_by_date(start_date, end_date,tempcompanyautokey):
     update_transactiondtl_item_ispallet(start_date,end_date)
 
     update_transactiondtl_ispallet_itemclass(start_date,end_date)
+
+    update_transactiondtl_kara_ispallet_itemclass(start_date,end_date)
 
     delete_crewdtl(start_date, end_date)
 

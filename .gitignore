@@ -10,6 +10,7 @@ __pycache__/
 
 # Environment
 env/
+__venv/
 .env
 
 # Django

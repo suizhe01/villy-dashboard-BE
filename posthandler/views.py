@@ -2297,13 +2297,14 @@ def post_commission(request):
         filter_sajioilpallet_q = CommissionItemClass.objects.filter(itemclassguid__itemclass="SAJIOILPALLET(Q)").first()
         filter_sajisweet_q = CommissionItemClass.objects.filter(itemclassguid__itemclass="SAJISWEET(Q)").first()
         filter_sajisweetpallet_q = CommissionItemClass.objects.filter(itemclassguid__itemclass="SAJISWEETPALLET(Q)").first()
-        filter_dutchlady_m = CommissionItemClass.objects.filter(itemclassguid__itemclass="DUTCHLADY($)").first()
         filter_lipton_m = CommissionItemClass.objects.filter(itemclassguid__itemclass="LIPTON($)").first()
         filter_mamee_m = CommissionItemClass.objects.filter(itemclassguid__itemclass="MAMEE($)").first()
         filter_mamypoko_m = CommissionItemClass.objects.filter(itemclassguid__itemclass="MAMYPOKO($)").first()
         filter_dksh_m = CommissionItemClass.objects.filter(itemclassguid__itemclass="DKSH($)").first()
         filter_sunquick_q = CommissionItemClass.objects.filter(itemclassguid__itemclass="SUNQUICK(Q)").first()
         filter_ecosafa_q = CommissionItemClass.objects.filter(itemclassguid__itemclass="ECOSAFA(Q)").first()
+        filter_kara_m = CommissionItemClass.objects.filter(itemclassguid__itemclass="KARA($)").first()
+        filter_kara_pallet_m = CommissionItemClass.objects.filter(itemclassguid__itemclass="KARA PALLET($)").first()
 
         for index,item in enumerate(data):
             employee_id = item.get('employee_id')
@@ -2321,15 +2322,16 @@ def post_commission(request):
             sajioilpallet_q = item.get('SAJIOILPALLET(Q)')
             sajisweet_q = item.get('SAJISWEET(Q)')
             sajisweetpallet_q = item.get('SAJISWEETPALLET(Q)')
-            dutchlady_m = item.get('DUTCHLADY($)')
             lipton_m = item.get('LIPTON($)')
             mamee_m = item.get('MAMEE($)')
             mamypoko_m = item.get('MAMYPOKO($)')
             dksh_m = item.get('DKSH($)')
             sunquick_q = item.get('SUNQUICK(Q)')
             ecosafa_q = item.get('ECOSAFA(Q)')
+            kara_m = item.get('KARA($)')
+            kara_pallet_m = item.get('KARAPALLET($)')
 
-            post_commission_template(employee_id,crew_name, crew_type,car_plate, sundry_m,dob_m,rb_q,yltc_q,le_q,cheers_q,rbpallet_q,sajioil_q,sajioilpallet_q,sajisweet_q,sajisweetpallet_q,dutchlady_m,lipton_m,mamee_m,mamypoko_m,dksh_m,sunquick_q,ecosafa_q,filter_sundry_m,filter_dob_m,filter_rb_q,filter_yltc_q,filter_le_q,filter_cheers_q,filter_rbpallet_q,filter_sajioil_q,filter_sajioilpallet_q,filter_sajisweet_q,filter_sajisweetpallet_q,filter_dutchlady_m,filter_lipton_m,filter_mamee_m,filter_mamypoko_m,filter_dksh_m,filter_sunquick_q,filter_ecosafa_q)
+            post_commission_template(employee_id,crew_name, crew_type,car_plate, sundry_m,dob_m,rb_q,yltc_q,le_q,cheers_q,rbpallet_q,sajioil_q,sajioilpallet_q,sajisweet_q,sajisweetpallet_q,lipton_m,mamee_m,mamypoko_m,dksh_m,sunquick_q,ecosafa_q,kara_m,kara_pallet_m,filter_sundry_m,filter_dob_m,filter_rb_q,filter_yltc_q,filter_le_q,filter_cheers_q,filter_rbpallet_q,filter_sajioil_q,filter_sajioilpallet_q,filter_sajisweet_q,filter_sajisweetpallet_q,filter_lipton_m,filter_mamee_m,filter_mamypoko_m,filter_dksh_m,filter_sunquick_q,filter_ecosafa_q,filter_kara_m,filter_kara_pallet_m)
         
 
         return JsonResponse({'request': 'POST', 'response': 'success', 'status': status.HTTP_201_CREATED}, safe=False, status=status.HTTP_201_CREATED)
@@ -2343,9 +2345,21 @@ class CommissionRatePagination(PageNumberPagination):
 def get_employee_commission_details(request):
     crew_name_filter = request.query_params.get('crew_name', None)
 
-    crewrates = CrewRate.objects.all().order_by('crewname')
+    # Fixed display order — any extra classes not in this list are appended at the end
+    commission_order = [
+        'SUNDRY($)', 'DOB($)', 'LIPTON($)', 'MAMEE($)', 'MAMYPOKO($)', 'DKSH($)',
+        'RB(Q)', 'YLTC(Q)', 'LE(Q)', 'CHEERS(Q)', 'RB PALLET(Q)',
+        'SAJIOIL(Q)', 'SAJIOILPALLET(Q)', 'SAJISWEET(Q)', 'SAJISWEETPALLET(Q)',
+        'SUNQUICK(Q)', 'ECOSAFA(Q)', 'KARA($)', 'KARA PALLET($)',
+    ]
+    db_item_classes = set(
+        CommissionItemClass.objects.select_related('itemclassguid')
+        .values_list('itemclassguid__itemclass', flat=True)
+    )
+    all_item_classes = [c for c in commission_order if c in db_item_classes] + \
+                       [c for c in db_item_classes if c not in commission_order]
 
-    # Filter by crew_name if provided (case-insensitive)
+    crewrates = CrewRate.objects.all().order_by('crewname')
     if crew_name_filter:
         crewrates = crewrates.filter(crewname__icontains=crew_name_filter)
 
@@ -2355,14 +2369,12 @@ def get_employee_commission_details(request):
             crewrateguid=crewrate
         ).select_related('commissionitemclassguid__itemclassguid')
 
-        # Group rates by crew_type
         crew_type_map = {}
         for dtl in dtls:
             crew_type = dtl.crewtype
             item_class_name = dtl.commissionitemclassguid.itemclassguid.itemclass
             comm_value = float(dtl.commvalue) if dtl.commvalue else 0
 
-            # ($) classes stored as decimals (e.g. 0.005), convert to % (e.g. 0.5)
             if '($)' in item_class_name:
                 comm_value = round(comm_value * 100, 4)
 
@@ -2378,7 +2390,17 @@ def get_employee_commission_details(request):
 
     paginator = CommissionRatePagination()
     page = paginator.paginate_queryset(result, request)
-    return paginator.get_paginated_response(page)
+
+    fixed_headers = ['employee_id', 'crew_name', 'crew_type']
+    headers = fixed_headers + all_item_classes
+
+    return Response({
+        'count': paginator.page.paginator.count,
+        'next': paginator.get_next_link(),
+        'previous': paginator.get_previous_link(),
+        'headers': headers,
+        'rows': page,
+    })
 
 @api_view(['POST'])
 def commission_add_lorry_crew_transaction(request):

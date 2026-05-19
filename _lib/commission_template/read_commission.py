@@ -10,7 +10,7 @@ def process_commission_file(dataframe):
     # item_uom_dict = {(item.itemcode.itemcode, item.uom): item for item in ItemUOM.objects.select_related('itemcode').all()}
 
     with pd.option_context('display.max_row', None):
-        selected_columns = dataframe[['CODE','NAME','DRIVER','CARPLATE','SUNDRY($)','DOB($)','RB(Q)','YLTC(Q)','LE(Q)','CHEERS(Q)','RBPALLET(Q)','SAJIOIL(Q)','SAJIOILPALLET(Q)','SAJISWEET(Q)','SAJISWEETPALLET(Q)','DUTCHLADY($)','LIPTON($)','MAMEE($)','MAMYPOKO($)','DKSH($)','SUNQUICK(Q)','ECOSAFA(Q)']]
+        selected_columns = dataframe[['CODE','NAME','DRIVER','CARPLATE','SUNDRY($)','DOB($)','RB(Q)','YLTC(Q)','LE(Q)','CHEERS(Q)','RBPALLET(Q)','SAJIOIL(Q)','SAJIOILPALLET(Q)','SAJISWEET(Q)','SAJISWEETPALLET(Q)','LIPTON($)','MAMEE($)','MAMYPOKO($)','DKSH($)','SUNQUICK(Q)','ECOSAFA(Q)','KARA($)','KARAPALLET($)']]
 
         for index, row in selected_columns.iterrows():
             raw_code = row['CODE']
@@ -31,13 +31,14 @@ def process_commission_file(dataframe):
             sajioil_pallet_q = row['SAJIOILPALLET(Q)']
             sajisweet_q = row['SAJISWEET(Q)']
             sajisweet_pallet_q = row['SAJISWEETPALLET(Q)']
-            dutchlady_m = row['DUTCHLADY($)']
             lipton_m = row['LIPTON($)']
             mamee_m = row['MAMEE($)']
             mamypoko_m = row['MAMYPOKO($)']
             sunquick_q = row['SUNQUICK(Q)']
             dksh_m = row['DKSH($)']
             ecosafa_q = row['ECOSAFA(Q)']
+            kara_m = row['KARA($)']
+            kara_pallet_m = row['KARAPALLET($)']
 
             if pd.isna(car_plate):
                 car_plate = ""
@@ -69,8 +70,9 @@ def process_commission_file(dataframe):
                     'SAJISWEET(Q)': sajisweet_q,
                     'SAJISWEETPALLET(Q)': sajisweet_pallet_q,
                     'SUNQUICK(Q)': sunquick_q,
-                    'DUTCHLADY($)': dutchlady_m,
-                    'ECOSAFA(Q)': ecosafa_q
+                    'ECOSAFA(Q)': ecosafa_q,
+                    'KARA($)': kara_m,
+                    'KARAPALLET($)': kara_pallet_m
                 })
                 
 
