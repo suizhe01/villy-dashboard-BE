@@ -1712,6 +1712,7 @@ def post_mp_cn_cndtl(request):
         return JsonResponse({'request': 'POST', 'response': 'success', 'status': status.HTTP_201_CREATED}, safe=False, status=status.HTTP_201_CREATED)
 
 ################################# DOB KARA #################################
+from _lib._kara.post_item_itemuom_function import create_kara_item_itemuom_invoice
 @api_view(['POST'])
 def post_kara_item_itemuom(request):
     if request.method == 'POST':
@@ -1731,10 +1732,9 @@ def post_kara_item_itemuom(request):
                 unit_price = item.get('unit_price')
                 unit_rate = item.get('unit_rate')
             
-                create_mp_item_iteuom(item_code, description, uom, price, rate, unit_uom, unit_price, unit_rate)
-        
-        # print(save_new_item.__dict__)
-        return JsonResponse({'request': 'POST', 'response': 'success', 'status': status.HTTP_201_CREATED}, safe=False, status=status.HTTP_201_CREATED)       
+                create_kara_item_itemuom_invoice(item_code, description, uom, price, rate, unit_uom, unit_price, unit_rate)
+
+        return JsonResponse({'request': 'POST', 'response': 'success', 'status': status.HTTP_201_CREATED}, safe=False, status=status.HTTP_201_CREATED)
 
 from _lib._kara.post_iv_ivdtl_kara import create_kara_iv_ivdtl
 

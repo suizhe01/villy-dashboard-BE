@@ -135,33 +135,34 @@ def process_kara_invoice_file(uploaded_file):
 
 def process_kara_cn_file(uploaded_file):
     cn = {'new_item':[],'cn':[]}
-    dataframe = pd.read_excel(uploaded_file, header=15)  
+    dataframe = pd.read_excel(uploaded_file, header=14)
     store_itemcode = []
 
     item_uom_dict = {(item.itemcode.itemcode, item.uom): item for item in ItemUOM.objects.select_related('itemcode').all()}
 
-
     with pd.option_context('display.max_row', None):
-        selected_columns = dataframe[['Route Code','Cust Ref','Cust Name','CN No','Txn Date','Product Code','Product Description','Qty in Unit','Gross Amount (RM)','Reason','Promo Discount (RM)','Net Amount (RM)', 'Remark']]
+        selected_columns = dataframe[['Route Code','Cust Ref','Cust Name','Doc No','Doc Date','Prd Code','Prd Description','UOM','Qty','Gross Amt (RM)','Promo Disc Amt (RM)','Net Amt (RM)', 'Remark']]
 
         current_cn_no = None
         seq = 0
 
         for index, row in selected_columns.iterrows():
-            cn_no = row['CN No']
-            cn_date = datetime.strptime(row['Txn Date'], '%d/%m/%Y').strftime('%Y-%m-%d')
+            cn_no = row['Doc No']
+            cn_date = row['Doc Date']
+            if isinstance(cn_date, str):
+                cn_date = datetime.strptime(cn_date, '%d/%m/%Y').strftime('%Y-%m-%d')
+            else:
+                cn_date = cn_date.strftime('%Y-%m-%d')
             customer_code = row['Cust Ref']
             customer_name = row['Cust Name']
             sales_agent = row['Route Code']
-            item_code = row['Product Code']
-            description = row['Product Description']
-            uom = 'UNT'
-            quantity = row['Qty in Unit']
-            price = row['Gross Amount (RM)']
-            discount_amount = row['Promo Discount (RM)']
-            net_amount = row['Net Amount (RM)']
-            reason = row['Reason']
-            seq = index + 1 
+            item_code = row['Prd Code']
+            description = row['Prd Description']
+            uom = row['UOM']
+            quantity = row['Qty']
+            price = row['Gross Amt (RM)']
+            discount_amount = row['Promo Disc Amt (RM)']
+            net_amount = row['Net Amt (RM)']
             our_invoice = row['Remark']
 
             if pd.isna(our_invoice):
@@ -173,29 +174,38 @@ def process_kara_cn_file(uploaded_file):
             else:
                 seq += 1
 
-            item_key =  (str(item_code), uom)
-            
+            item_key = (str(item_code), uom)
+
             if item_key not in item_uom_dict and item_key not in store_itemcode:
                 store_itemcode.append(item_key)
+                if uom == 'CTN':
+                    ctn_price = price / quantity
+                    cn['new_item'].append({
+                        'item_code': item_code,
+                        'description': description,
+                        'uom': uom,
+                        'rate': 0,
+                        'price': ctn_price,
+                        'unit_uom': 'UNT',
+                        'unit_price': 0,
+                        'unit_rate': 1,
+                        'trigger_file_type': 'AddItem'
+                    })
+                else:
+                    unit_price = price / quantity
+                    cn['new_item'].append({
+                        'item_code': item_code,
+                        'description': description,
+                        'uom': uom,
+                        'rate': 1,
+                        'price': unit_price,
+                        'unit_uom': uom,
+                        'unit_price': unit_price,
+                        'unit_rate': 1,
+                        'trigger_file_type': 'AddItem'
+                    })
 
-                unit_price = price/quantity
-
-                cn['new_item'].append({
-                    'item_code': item_code,
-                    'description': description,
-                    'uom': 'CTN',
-                    'rate': 0,
-                    'price': 0,
-                    'unit_uom': 'UNT',
-                    'unit_price': unit_price,
-                    'unit_rate': 1,
-                    'trigger_file_type': 'AddItem'
-                }) 
-
-            # cn_date_formatted = cn_date.strftime('%Y-%m-%d')
-
-            if uom == 'UNT':
-                price = price/quantity
+            price = price / quantity
 
             cn['cn'].append({
                 'cn_no': cn_no,
@@ -211,7 +221,7 @@ def process_kara_cn_file(uploaded_file):
                 'discount_amount': abs(discount_amount),
                 'net_amount': abs(net_amount),
                 'price': price,
-                'reason': reason,
+                'reason': '',
                 'our_invoice': our_invoice
             })
 
