@@ -2200,6 +2200,8 @@ def post_dob_mamee_iv_ivdtl_invoice(request):
 ################################# DOB ECOSAFA #################################
 from _lib.dob.ecosafa.post_item_itemuom_dob_ecosafa import create_dob_ecosafa_item_iteuom
 from _lib.dob.ecosafa.post_iv_ivdtl_dob_ecosafa import create_dob_ecosafa_iv_ivdtl_invoice
+from _lib.dob.dksh.post_item_itemuom_dob_dksh import create_dob_dksh_item_itemuom
+from _lib.dob.dksh.post_iv_ivdtl_dob_dksh import create_dob_dksh_iv_ivdtl_invoice
 
 @api_view(['POST'])
 def post_dob_ecosafa_item_itemuom(request):
@@ -2274,6 +2276,82 @@ def post_dob_ecosafa_iv_ivdtl_invoice(request):
 
             create_dob_ecosafa_iv_ivdtl_invoice(debtor_code, debtor_name, invoice_no, item_code, invoice_date, quantity, rate, uom, seq, tempcompanyautokey, branchautokey, location, temporary_display_term, lorry_driver, udf_book, description)
             seq += 1
+
+        return JsonResponse({'request': 'POST', 'response': 'success', 'status': status.HTTP_201_CREATED}, safe=False, status=status.HTTP_201_CREATED)
+
+################################# DOB DKSH #################################
+@api_view(['POST'])
+def post_dob_dksh_item_itemuom(request):
+    if request.method == 'POST':
+        data = request.data
+        if not isinstance(data, list):
+            return JsonResponse({'error': 'Invalid data format. Expected a list of JSON objects.'}, status=status.HTTP_400_BAD_REQUEST)
+
+        for item in data:
+            trigger_file_type = item.get('trigger_file_type')
+
+            if trigger_file_type == 'Invoice':
+                itemcode = item.get('item_code')
+                description = item.get('description')
+                uom = item.get('uom')
+                rate = item.get('rate')
+                price = item.get('price')
+                unit_uom = item.get('unit_uom')
+                unit_price = item.get('unit_price')
+                unit_rate = item.get('unit_rate')
+
+                create_dob_dksh_item_itemuom(itemcode, description, uom, price, rate, unit_uom, unit_price, unit_rate)
+
+        return JsonResponse({'request': 'POST', 'response': 'success', 'status': status.HTTP_201_CREATED}, safe=False, status=status.HTTP_201_CREATED)
+
+@api_view(['POST'])
+def post_dob_dksh_iv_ivdtl_invoice(request):
+    if request.method == 'POST':
+        data = request.data
+        if not isinstance(data, list):
+            return JsonResponse({'error': 'Invalid data format. Expected a list of JSON objects.'}, status=status.HTTP_400_BAD_REQUEST)
+
+        temporary_display_term = Terms.objects.first()
+        tempcompanyautokey = Company.objects.filter(name='Villy').first()
+        branchautokey = Branch.objects.filter(address__contains='NA').first()
+        location = Location.objects.filter(location='NA').first()
+        lorry_driver = 'NA'
+        udf_book = '3'
+        previous_invoice_no = ''
+        delete = True
+
+        for item in data:
+            invoice_no = item.get('invoice_no')
+            invoice_date = item.get('invoice_date')
+            seq = item.get('seq')
+            debtor_code = item.get('debtor_code')
+            debtor_name = item.get('debtor_name')
+            sales_agent = item.get('sales_agent')
+            item_code = item.get('item_code')
+            description = item.get('description')
+            quantity = item.get('quantity')
+            uom = item.get('uom')
+            price = item.get('price')
+            discount_amount = item.get('discount_amount')
+            net_amount = item.get('net_amount')
+
+            if previous_invoice_no == '':
+                previous_invoice_no = invoice_no
+
+            if previous_invoice_no != invoice_no:
+                delete = True
+                previous_invoice_no = invoice_no
+
+            if delete == True:
+                filter_header_iv = IV.objects.filter(docno=invoice_no).first()
+                if filter_header_iv:
+                    filter_child_iv = IVDTL.objects.filter(headerautokey=filter_header_iv)
+                    if filter_child_iv.exists():
+                        filter_child_iv.delete()
+                    filter_header_iv.delete()
+                delete = False
+
+            create_dob_dksh_iv_ivdtl_invoice(invoice_no,invoice_date,debtor_name,debtor_code,seq,sales_agent,item_code,quantity,uom,discount_amount,net_amount,price,description,temporary_display_term,tempcompanyautokey,branchautokey,location,lorry_driver,udf_book)
 
         return JsonResponse({'request': 'POST', 'response': 'success', 'status': status.HTTP_201_CREATED}, safe=False, status=status.HTTP_201_CREATED)
 

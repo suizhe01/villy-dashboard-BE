@@ -14,6 +14,7 @@ post_kara_item_itemuom, post_kara_iv_ivdtl_invoice, post_kara_cn_cndtl,\
         post_dob_mamee_item_itemuom,post_dob_mamee_iv_ivdtl_invoice,\
         post_dob_tohtonku_item_itemuom,post_dob_tohtonku_iv_ivdtl_invoice,\
         post_dob_ecosafa_item_itemuom, post_dob_ecosafa_iv_ivdtl_invoice,\
+        post_dob_dksh_item_itemuom, post_dob_dksh_iv_ivdtl_invoice,\
                                             post_commission,\
                                             commission_add_lorry_crew_transaction,\
                                             calculate_commission,display_commission_by_crew_id, display_commission_by_crew_guid,display_commission_by_lorry_guid,\
@@ -97,6 +98,10 @@ urlpatterns = [
     # dob ecosafa
     path('post_dob_ecosafa_item_itemuom/', post_dob_ecosafa_item_itemuom, name='post_dob_ecosafa_item_itemuom'),
     path('post_dob_ecosafa_iv_ivdtl_invoice/', post_dob_ecosafa_iv_ivdtl_invoice, name='post_dob_ecosafa_iv_ivdtl_invoice'),
+
+    # dob dksh
+    path('post_dob_dksh_item_itemuom/', post_dob_dksh_item_itemuom, name='post_dob_dksh_item_itemuom'),
+    path('post_dob_dksh_iv_ivdtl_invoice/', post_dob_dksh_iv_ivdtl_invoice, name='post_dob_dksh_iv_ivdtl_invoice'),
 
     
     # commission
