@@ -7,6 +7,7 @@ from transaction.models import Transaction
 from transactiondtl.models import TransactionDtl
 from itemclass.models import ItemClass
 from _lib.panda import panda_uuid
+from _lib.commission_filters import NON_COMMISSIONABLE_UOM_SQL
 from itemuom.models import ItemUOM
 from item.models import Item
 from decimal import Decimal
@@ -277,7 +278,7 @@ def delete_crewdtl(start_date, end_date):
         cursor.execute(query_delete_crew_commission_dtl, [start_date, end_date])
 
 def create_crewdtl(start_date, end_date):
-    query_add_crewdtl = """
+    query_add_crewdtl = f"""
         SELECT itemclass, SUM(qty), SUM(SubTotal), c.lorryguid, b.share,
                MAX(a.UdfCalMethod), MAX(a.UdfCalRate), a.CommType
         FROM autocount_dashboard.transactiondtl AS a
@@ -291,6 +292,7 @@ def create_crewdtl(start_date, end_date):
             OR itemclass IN ('SUNQUICK(Q)', 'SUNDRY($)', 'CHEERS(Q)', 'ECOSAFA(Q)')
             OR (a.CommType = '$' AND a.qty > 0)
         )
+        {NON_COMMISSIONABLE_UOM_SQL}
         GROUP BY b.Share, a.itemclass, c.lorryguid, a.CommType;
     """
 

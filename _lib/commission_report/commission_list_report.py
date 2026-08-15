@@ -5,6 +5,7 @@ from collections import defaultdict
 from decimal import Decimal
 from django.db import connections
 from weasyprint import HTML, CSS
+from _lib.commission_filters import NON_COMMISSIONABLE_UOM_SQL
 
 def list_report(lorry_number, document_date, employee_details, invoice_list_no, generator_name=None):
     # print(document_date, invoice_list_no)
@@ -18,7 +19,7 @@ def list_report(lorry_number, document_date, employee_details, invoice_list_no, 
     # SQL Execution
     docno_list = tuple(invoice_list_no)
 
-    query = """
+    query = f"""
     SELECT
         a.uom,
         c.CompanyName as "Outlet Name",
@@ -42,6 +43,7 @@ def list_report(lorry_number, document_date, employee_details, invoice_list_no, 
         OR a.itemclass IN ('SUNQUICK(Q)', 'SUNDRY($)', 'CHEERS(Q)', 'ECOSAFA(Q)')
         OR (a.commtype = '$' AND a.qty > 0)
     )
+    {NON_COMMISSIONABLE_UOM_SQL}
     GROUP BY
         c.CompanyName, b.DebtorCode, b.DocNo, a.commtype, a.uom,
         CASE WHEN a.commtype = '$' THEN a.itemclass ELSE 'N/A' END,
