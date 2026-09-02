@@ -9,9 +9,10 @@ def create_dob_mamee_item_iteuom(itemcode, description, uom, price, rate, unit_u
     filter_uom = ItemUOM.objects.filter(itemcode=itemcode, uom=uom)
 
     mainsupplier='DOB_MAMEE'
+    itemclass = 'MAMEE($)'
 
     if not filter_itemcode:
-        save_new_item = Item(description=description,itemcode=itemcode,companyautokey=tempcompanyautokey,mainsupplier=mainsupplier, dockkey=1, dutyrate=1, costingmethod=0, lastmodified=datetime.now(), lastupdate=0)
+        save_new_item = Item(description=description,itemcode=itemcode,companyautokey=tempcompanyautokey,mainsupplier=mainsupplier,itemclass=itemclass, dockkey=1, dutyrate=1, costingmethod=0, lastmodified=datetime.now(), lastupdate=0)
         save_new_item.save()
         itemcode_intance = Item.objects.get(itemcode=itemcode)
 
@@ -25,6 +26,14 @@ def create_dob_mamee_item_iteuom(itemcode, description, uom, price, rate, unit_u
             save_unit_uom.save()
     else:
         itemcode_intance = Item.objects.get(itemcode=itemcode)
+
+        # Backfill items created before this import set the itemclass. An
+        # itemclass that is already set is left alone, so an ERP
+        # reclassification is never overwritten by this import.
+        if not itemcode_intance.itemclass:
+            itemcode_intance.itemclass = itemclass
+            itemcode_intance.save()
+
         if not filter_uom:
             save_new_uom = ItemUOM(companyautokey=tempcompanyautokey,itemcode=itemcode_intance,uom=uom,rate=rate,price=price,lastupdate=0)
             save_new_uom.save()
