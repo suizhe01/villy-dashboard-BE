@@ -2507,6 +2507,7 @@ def commission_add_lorry_crew_transaction(request):
         return JsonResponse({'request': 'POST', 'response': 'success', 'status': status.HTTP_201_CREATED}, safe=False, status=status.HTTP_201_CREATED)
     
 from _lib.calculate_commission_by_date.calculate_commission import calculate_commission_by_date
+from _lib.db_lock import named_lock, LockNotAcquired
 
 @api_view(['POST'])
 def calculate_commission(request):
@@ -2520,8 +2521,17 @@ def calculate_commission(request):
         end_date = datetime.strptime(data.get('end_date'), "%Y-%m-%d")  
         end_date = end_date.replace(hour=23, minute=59, second=59, microsecond=999000)  # Add time component
 
-        response = calculate_commission_by_date(start_date, end_date,tempcompanyautokey)
-        
+        # Two runs at once both see crewdtl empty after their deletes and both
+        # insert, so every crew is paid twice. A second run waits for the first
+        # to finish rather than being refused: the Calculate Commission page
+        # fires one run per date picked, and refusing the second would leave the
+        # table showing the first date range.
+        try:
+            with named_lock('calculate_commission', timeout=300):
+                response = calculate_commission_by_date(start_date, end_date,tempcompanyautokey)
+        except LockNotAcquired:
+            return JsonResponse({'error': 'Commission calculation already running', 'message': 'Another commission calculation is still running. Please try again in a few minutes.'}, status=status.HTTP_409_CONFLICT)
+
         return JsonResponse(response, safe=False, status=status.HTTP_201_CREATED)
 
 from _lib.calculate_commission_by_date.get_commission_by_crewid import display_calculated_comm_by_crewid

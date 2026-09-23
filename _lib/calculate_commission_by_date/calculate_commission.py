@@ -1,7 +1,7 @@
 from lorry.models import Lorry
 from crew.models import Crew
 from crewdtl.models import Crewdtl
-from django.db import connection
+from django.db import connection, transaction as db_transaction
 from datetime import datetime
 from transaction.models import Transaction
 from transactiondtl.models import TransactionDtl
@@ -243,14 +243,15 @@ def update_transactiondtl_qty(start_date, end_date):
     update_new_qty = []
     for update in update_qty:
         transactiondtl_guid, udf_calmethod, udf_calrate, qty, isqty_updated, uom, itemclass = update
-        if itemclass=='SUNQUICK(Q)':
-            if uom == 'UNT':
-                print('hi')
+
+        # Every conversion runs once per line. The SUNQUICK one used to sit
+        # outside this check, so each run divided the same line by 6 again
+        # until its qty wore down to 0.
+        if isqty_updated == 0:
+            if itemclass=='SUNQUICK(Q)' and uom == 'UNT':
                 new_qty = qty/6
                 update_new_qty.append((transactiondtl_guid,new_qty))
-
-        if isqty_updated == 0:
-            if udf_calmethod:
+            elif udf_calmethod:
                 new_qty = qty*udf_calrate
                 update_new_qty.append((transactiondtl_guid,new_qty))
 
@@ -521,13 +522,17 @@ def calculate_commission_by_date(start_date, end_date,tempcompanyautokey):
 
     update_transactiondtl_kara_ispallet_itemclass(start_date,end_date)
 
-    delete_crewdtl(start_date, end_date)
+    # Rebuild crewdtl as one unit. Until it commits, every other reader keeps
+    # seeing the previous figures rather than an empty or half-built table, and
+    # a failure part-way rolls back to them instead of leaving it half-built.
+    with db_transaction.atomic():
+        delete_crewdtl(start_date, end_date)
 
-    create_crewdtl(start_date, end_date)
-    
-    update_crewdtl_commvalue(start_date, end_date)
+        create_crewdtl(start_date, end_date)
 
-    calculation_for_document_sum(start_date, end_date)
+        update_crewdtl_commvalue(start_date, end_date)
+
+        calculation_for_document_sum(start_date, end_date)
 
     return display_calculated_comm(start_date,end_date)
 
