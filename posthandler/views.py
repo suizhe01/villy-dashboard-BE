@@ -2506,8 +2506,25 @@ def commission_add_lorry_crew_transaction(request):
         
         return JsonResponse({'request': 'POST', 'response': 'success', 'status': status.HTTP_201_CREATED}, safe=False, status=status.HTTP_201_CREATED)
     
-from _lib.calculate_commission_by_date.calculate_commission import calculate_commission_by_date
-from _lib.db_lock import named_lock, LockNotAcquired
+from _lib.calculate_commission_by_date.calculate_commission import calculate_commission_by_date, CalculationCancelled
+from _lib.db_lock import named_lock, LockNotAcquired, is_lock_held
+from commissionrun.models import CommissionRun
+
+CALCULATE_COMMISSION_LOCK = 'calculate_commission'
+
+def serialize_commission_run(run):
+    return {
+        'id': run.id,
+        'start_date': run.start_date.isoformat(),
+        'end_date': run.end_date.isoformat(),
+        'status': run.status,
+        'started_at': run.started_at.isoformat(),
+        'finished_at': run.finished_at.isoformat() if run.finished_at else None,
+        'error': run.error,
+    }
+
+def finish_commission_run(run, run_status, error=None):
+    CommissionRun.objects.filter(pk=run.pk).update(status=run_status, finished_at=datetime.now(), step_timings=run.step_timings, error=error)
 
 @api_view(['POST'])
 def calculate_commission(request):
@@ -2526,13 +2543,51 @@ def calculate_commission(request):
         # to finish rather than being refused: the Calculate Commission page
         # fires one run per date picked, and refusing the second would leave the
         # table showing the first date range.
+        #
+        # Each run is recorded before it starts, outside the pipeline's
+        # transaction, so every other page sees it straight away, and is marked
+        # finished before the lock is released.
         try:
-            with named_lock('calculate_commission', timeout=300):
-                response = calculate_commission_by_date(start_date, end_date,tempcompanyautokey)
+            with named_lock(CALCULATE_COMMISSION_LOCK, timeout=300):
+                run = CommissionRun.objects.create(start_date=start_date, end_date=end_date.date(), status=CommissionRun.RUNNING, started_at=datetime.now())
+                try:
+                    response = calculate_commission_by_date(start_date, end_date,tempcompanyautokey, run=run)
+                except CalculationCancelled:
+                    finish_commission_run(run, CommissionRun.CANCELLED)
+                    return JsonResponse({'error': 'cancelled', 'message': 'Calculation cancelled — nothing was changed.'}, status=status.HTTP_409_CONFLICT)
+                except Exception as e:
+                    finish_commission_run(run, CommissionRun.FAILED, error=f'{type(e).__name__}: {e}')
+                    raise
+                finish_commission_run(run, CommissionRun.DONE)
         except LockNotAcquired:
-            return JsonResponse({'error': 'Commission calculation already running', 'message': 'Another commission calculation is still running. Please try again in a few minutes.'}, status=status.HTTP_409_CONFLICT)
+            return JsonResponse({'error': 'busy', 'message': 'Another commission calculation is still running. Please try again in a few minutes.'}, status=status.HTTP_409_CONFLICT)
 
         return JsonResponse(response, safe=False, status=status.HTTP_201_CREATED)
+
+@api_view(['GET'])
+def commission_run_status(request):
+    latest = CommissionRun.objects.order_by('-id').first()
+
+    running = None
+    if latest is not None and latest.status == CommissionRun.RUNNING:
+        if is_lock_held(CALCULATE_COMMISSION_LOCK):
+            running = serialize_commission_run(latest)
+        else:
+            # A run always finishes its row before releasing the lock, so a
+            # running row with the lock free belongs to a process that died
+            # mid-run (for example the dev server reloading). MySQL rolled its
+            # transaction back when the connection dropped.
+            CommissionRun.objects.filter(pk=latest.pk, status=CommissionRun.RUNNING).update(status=CommissionRun.FAILED, finished_at=datetime.now(), error='Interrupted — nothing was changed.')
+
+    last = CommissionRun.objects.exclude(status=CommissionRun.RUNNING).order_by('-id').first()
+    return JsonResponse({'running': running, 'last': serialize_commission_run(last) if last else None}, status=status.HTTP_200_OK)
+
+@api_view(['POST'])
+def cancel_calculate_commission(request):
+    run_id = request.data.get('run_id')
+    # By id, so a click on a banner that is out of date cannot cancel a newer run.
+    applied = CommissionRun.objects.filter(pk=run_id, status=CommissionRun.RUNNING).update(cancel_requested=True)
+    return JsonResponse({'cancel_requested': bool(applied)}, status=status.HTTP_200_OK)
 
 from _lib.calculate_commission_by_date.get_commission_by_crewid import display_calculated_comm_by_crewid
 

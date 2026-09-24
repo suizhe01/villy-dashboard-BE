@@ -11,6 +11,9 @@ from _lib.commission_filters import NON_COMMISSIONABLE_RB_SQL
 from itemuom.models import ItemUOM
 from item.models import Item
 from decimal import Decimal
+from commissionrun.models import CommissionRun
+import json
+import time
 
 def flag_share_value(start_date, end_date):
     flag_1_query = """
@@ -505,34 +508,54 @@ def display_calculated_comm(start_date, end_date):
     
     return all_calculated_comm
 
-def calculate_commission_by_date(start_date, end_date,tempcompanyautokey):
-    # # # flag 1/2 for share
-    flag_share_value(start_date, end_date)
-    
-    # update transactiondtl for calmethod and calrate 
-    update_transactiondtl_calmethod_calrate(start_date, end_date)
+class CalculationCancelled(Exception):
+    pass
 
-    update_transactiondtl_qty(start_date,end_date)
 
-    update_transaction_debtor_is_pallet(start_date, end_date)
+# In the order they must run. Steps 1-7 prepare transactiondtl (share, qty
+# conversion, pallet flags); steps 8-11 rebuild crewdtl from it.
+STEPS = [
+    ('flag_share_value', flag_share_value),
+    ('update_transactiondtl_calmethod_calrate', update_transactiondtl_calmethod_calrate),
+    ('update_transactiondtl_qty', update_transactiondtl_qty),
+    ('update_transaction_debtor_is_pallet', update_transaction_debtor_is_pallet),
+    ('update_transactiondtl_item_ispallet', update_transactiondtl_item_ispallet),
+    ('update_transactiondtl_ispallet_itemclass', update_transactiondtl_ispallet_itemclass),
+    ('update_transactiondtl_kara_ispallet_itemclass', update_transactiondtl_kara_ispallet_itemclass),
+    ('delete_crewdtl', delete_crewdtl),
+    ('create_crewdtl', create_crewdtl),
+    ('update_crewdtl_commvalue', update_crewdtl_commvalue),
+    ('calculation_for_document_sum', calculation_for_document_sum),
+]
 
-    update_transactiondtl_item_ispallet(start_date,end_date)
+def calculate_commission_by_date(start_date, end_date,tempcompanyautokey, run=None):
+    """Run every step as one unit, so a cancel or failure undoes the whole run.
 
-    update_transactiondtl_ispallet_itemclass(start_date,end_date)
+    Until it commits, other readers keep seeing the previous figures rather than
+    a half-built crewdtl. With `run` (a CommissionRun), a cancel request is
+    checked before each step and each step's duration is kept in
+    run.step_timings. The check sees the Cancel button's update while this
+    transaction is open because the database reads at READ-COMMITTED.
+    """
+    timings = []
 
-    update_transactiondtl_kara_ispallet_itemclass(start_date,end_date)
+    def raise_if_cancelled(before):
+        if run is not None and CommissionRun.objects.filter(pk=run.pk, cancel_requested=True).exists():
+            raise CalculationCancelled(before)
 
-    # Rebuild crewdtl as one unit. Until it commits, every other reader keeps
-    # seeing the previous figures rather than an empty or half-built table, and
-    # a failure part-way rolls back to them instead of leaving it half-built.
     with db_transaction.atomic():
-        delete_crewdtl(start_date, end_date)
+        for name, step in STEPS:
+            raise_if_cancelled(name)
 
-        create_crewdtl(start_date, end_date)
+            started = time.monotonic()
+            step(start_date, end_date)
+            timings.append([name, round(time.monotonic() - started, 2)])
 
-        update_crewdtl_commvalue(start_date, end_date)
+            if run is not None:
+                run.step_timings = json.dumps(timings)
 
-        calculation_for_document_sum(start_date, end_date)
+        # A cancel pressed during the last step still undoes the run.
+        raise_if_cancelled('commit')
 
     return display_calculated_comm(start_date,end_date)
 

@@ -34,3 +34,10 @@ def named_lock(name, timeout):
     finally:
         with connection.cursor() as cursor:
             cursor.execute("SELECT RELEASE_LOCK(%s)", [name])
+
+
+def is_lock_held(name):
+    """Whether any session currently holds the MySQL lock `name`."""
+    with connection.cursor() as cursor:
+        cursor.execute("SELECT IS_USED_LOCK(%s)", [name])
+        return cursor.fetchone()[0] is not None

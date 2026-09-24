@@ -107,6 +107,7 @@ INSTALLED_APPS = [
     'acdebtor.apps.AcdebtorConfig',
     'aciv.apps.AcivConfig',
     'acivdtl.apps.AcivdtlConfig',
+    'commissionrun.apps.CommissionrunConfig',
 ]
 
 ####ADD

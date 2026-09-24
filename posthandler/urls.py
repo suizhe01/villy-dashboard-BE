@@ -17,7 +17,7 @@ post_kara_item_itemuom, post_kara_iv_ivdtl_invoice, post_kara_cn_cndtl,\
         post_dob_dksh_item_itemuom, post_dob_dksh_iv_ivdtl_invoice,\
                                             post_commission,\
                                             commission_add_lorry_crew_transaction,\
-                                            calculate_commission,display_commission_by_crew_id, display_commission_by_crew_guid,display_commission_by_lorry_guid,\
+                                            calculate_commission,commission_run_status,cancel_calculate_commission,display_commission_by_crew_id, display_commission_by_crew_guid,display_commission_by_lorry_guid,\
                                             get_employee_commission_details,\
                                             custom_get_crew,\
                                             custom_create_crew,\
@@ -109,6 +109,8 @@ urlpatterns = [
     path('commission_add_lorry_crew_transaction/', commission_add_lorry_crew_transaction, name='commission_add_lorry_crew_transaction'),
 
     path('calculate_commission/', calculate_commission, name='calculate_commission'),
+    path('commission_run_status/', commission_run_status, name='commission_run_status'),
+    path('cancel_calculate_commission/', cancel_calculate_commission, name='cancel_calculate_commission'),
     path('display_commission_by_crew_id/', display_commission_by_crew_id, name='display_commission_by_crew_id'),
     path('display_commission_by_crew_guid/', display_commission_by_crew_guid, name='display_commission_by_crew_guid'),
     path('display_commission_by_lorry_guid/', display_commission_by_lorry_guid, name='display_commission_by_lorry_guid'),
