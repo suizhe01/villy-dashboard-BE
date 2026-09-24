@@ -12,7 +12,10 @@ class Transaction(models.Model):
                                        db_column='LorryGuid',
                                        related_name='TransactionLorryGuid'
                                        )
-    docno = models.CharField(max_length=20,db_column='DocNo', null= False)
+    # Indexed because the commission pipeline, Add Invoice and the PDF report all
+    # look invoices up by DocNo; without it every lookup scans the whole table.
+    # Not unique: a shared invoice has one row per lorry.
+    docno = models.CharField(max_length=20,db_column='DocNo', null= False, db_index=True)
     docdate = models.DateTimeField(db_column='DocDate', null=False)
     debtorname = models.CharField(max_length=80, db_column='DebtorName', null=False)
     debtorcode = models.CharField(max_length=80, db_column='DebtorCode', null=False)
