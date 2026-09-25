@@ -43,7 +43,8 @@ class CN(models.Model):
                                     null= False, 
                                     to_field='salesagent')
     udfbook = models.PositiveSmallIntegerField(db_column='UdfBook',null=True, blank=True, default=2)
-    docno = models.CharField(max_length=255,db_column='DocNo', null= False)
+    # Indexed: CN uploads look credit notes up by number. Not unique.
+    docno = models.CharField(max_length=255,db_column='DocNo', null= False, db_index=True)
     docdate = models.DateTimeField(db_column='DocDate', null=False)
     cntype = models.CharField(max_length=12,db_column='CNType', null= True)
     ref = models.CharField(max_length=40,db_column='Ref', null= True)

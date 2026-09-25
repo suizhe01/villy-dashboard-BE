@@ -23,7 +23,9 @@ class IV(models.Model):
                                        related_name='IVTermsDisplayTerm',
                                        null=False
                                        )
-    docno = models.CharField(max_length=20,db_column='DocNo', null= False)
+    # Indexed: uploads and Add Invoice look invoices up by number; without it
+    # each lookup scanned the whole table. Not unique: a few numbers repeat.
+    docno = models.CharField(max_length=20,db_column='DocNo', null= False, db_index=True)
     docdate = models.DateTimeField(db_column='DocDate', null=False)
     debtorcode = models.ForeignKey(Debtor, 
                                     models.DO_NOTHING,
@@ -150,6 +152,10 @@ class IV(models.Model):
         managed = True
         db_table = "iv"
         ordering = ("docno",)
+        # For listing a book's invoices over a date range.
+        indexes = [
+            models.Index(fields=["udfbook", "docdate"], name="iv_udfbook_docdate_idx"),
+        ]
 
     def __str__(self):
         return self.autokey
