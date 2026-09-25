@@ -2722,7 +2722,7 @@ def export_crew(request):
 
         return response
 
-from _lib.search_transaction.search_invoice import search_invoice
+from _lib.search_transaction.search_invoice import search_invoice, search_invoices
 @api_view(['POST'])
 def search_transaction(request):
     if request.method == 'POST':
@@ -2731,6 +2731,14 @@ def search_transaction(request):
         invoice = data.get('invoice_no')
         response = search_invoice(invoice)
 
+        return JsonResponse(response, safe=False, status=status.HTTP_200_OK)
+
+# Partial, any-case invoice search across all dates; search_transaction above is
+# the old exact-match search, kept until no page calls it.
+@api_view(['POST'])
+def search_invoice_partial(request):
+    if request.method == 'POST':
+        response = search_invoices(request.data.get('query'))
         return JsonResponse(response, safe=False, status=status.HTTP_200_OK)
     
 
