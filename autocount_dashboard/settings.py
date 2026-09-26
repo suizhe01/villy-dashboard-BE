@@ -108,6 +108,7 @@ INSTALLED_APPS = [
     'aciv.apps.AcivConfig',
     'acivdtl.apps.AcivdtlConfig',
     'commissionrun.apps.CommissionrunConfig',
+    'importjob.apps.ImportjobConfig',
 ]
 
 ####ADD

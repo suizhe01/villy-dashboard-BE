@@ -23,7 +23,7 @@ post_kara_item_itemuom, post_kara_iv_ivdtl_invoice, post_kara_cn_cndtl,\
                                             custom_create_crew,\
                                             custom_delete_crew, custom_delete_transaction,\
                                             export_crew,\
-                                            search_transaction, search_invoice_partial,\
+                                            search_transaction, search_invoice_partial, import_progress,\
                                             print_commission_list_report,\
                                             custom_update_lorry_plate
 
@@ -134,6 +134,7 @@ urlpatterns = [
     # search function
     path('search_transaction/', search_transaction, name='search_transaction'),
     path('search_invoice/', search_invoice_partial, name='search_invoice'),
+    path('import_progress/', import_progress, name='import_progress'),
 
     # print list report
     path('print_commission_list_report/', print_commission_list_report, name='print_commission_list_report'),

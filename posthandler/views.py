@@ -1,5 +1,6 @@
 from django.shortcuts import render
 from rest_framework.decorators import api_view
+from _lib.import_progress import track_import, track
 from rest_framework.response import Response
 from rest_framework import status
 from rest_framework.pagination import PageNumberPagination
@@ -83,6 +84,7 @@ def process_in_batches(data, batch_size=300):
         yield data[i:i + batch_size]
 
 @api_view(['POST'])
+@track_import
 def post_dutchlady_item_itemuom(request):
     if request.method == 'POST':
         data = request.data
@@ -91,7 +93,7 @@ def post_dutchlady_item_itemuom(request):
 
         response_list = []
         for batch in process_in_batches(data):
-            for item in batch:
+            for item in track(batch):
                 trigger_file_type = item.get('trigger_file_type')
                 itemcode = item.get('item_code')
                 description = item.get('description')
@@ -113,6 +115,7 @@ def post_dutchlady_item_itemuom(request):
         return JsonResponse({'request': 'POST', 'response': 'success', 'status': status.HTTP_201_CREATED}, safe=False, status=status.HTTP_201_CREATED)
 
 @api_view(['POST'])
+@track_import
 def post_dutchlady_gr_grdtl_purchase(request):
     if request.method == 'POST':
         data = request.data
@@ -120,7 +123,7 @@ def post_dutchlady_gr_grdtl_purchase(request):
             return JsonResponse({'error': 'Invalid data format. Expected a list of JSON objects.'}, status=status.HTTP_400_BAD_REQUEST)
         
         response_list = []
-        for index,item in enumerate(data):
+        for index,item in enumerate(track(data)):
             delivery_no = item.get('good_receive_no')
             delivery_date = item.get('good_receive_date')
             item_code = item.get('item_code')
@@ -139,6 +142,7 @@ def post_dutchlady_gr_grdtl_purchase(request):
     return JsonResponse({'request': 'POST', 'response': response_list, 'status': status.HTTP_201_CREATED}, safe=False, status=status.HTTP_201_CREATED)
 
 @api_view(['POST'])
+@track_import
 def post_dutchlady_pi_pidtl_purchase(request):
     if request.method == 'POST': 
         data = request.data
@@ -146,7 +150,7 @@ def post_dutchlady_pi_pidtl_purchase(request):
             return JsonResponse({'error': 'Invalid data format. Expected a list of JSON objects.'}, status=status.HTTP_400_BAD_REQUEST)
         
         response_list = []
-        for item in data:
+        for item in track(data):
             delivery_no = item.get('good_receive_no')
             delivery_date = item.get('good_receive_date')
             invoice_no = item.get('purchase_invoice_no')
@@ -167,6 +171,7 @@ def post_dutchlady_pi_pidtl_purchase(request):
     return JsonResponse({'request': 'POST', 'response': response_list, 'status': status.HTTP_201_CREATED}, safe=False, status=status.HTTP_201_CREATED)
 
 @api_view(['POST'])
+@track_import
 def post_dutchlady_iv_ivdtl_invoice(request):
     if request.method == 'POST':
         data = request.data
@@ -184,7 +189,7 @@ def post_dutchlady_iv_ivdtl_invoice(request):
         udf_book2 = '2'
 
         response_list = []
-        for index,item in enumerate(data):
+        for index,item in enumerate(track(data)):
             debtor_code = item.get('debtor_code')
             debtor_name = item.get('debtor_name')
             invoice_no = item.get('transaction_no')
@@ -228,6 +233,7 @@ def post_dutchlady_iv_ivdtl_invoice(request):
     return JsonResponse({'request': 'POST', 'response': 'success', 'status': status.HTTP_201_CREATED}, safe=False, status=status.HTTP_201_CREATED)
 
 @api_view(['POST'])
+@track_import
 def post_dutchlady_cn_cndtl(request):
     if request.method == 'POST':
         data = request.data
@@ -243,7 +249,7 @@ def post_dutchlady_cn_cndtl(request):
         seq = 1
         delete = True
         response_list = []
-        for index,item in enumerate(data):
+        for index,item in enumerate(track(data)):
             cn_no = item.get('cn_no')
             cn_date = item.get('cn_date')
             debtor_code = item.get('debtor_code')
@@ -290,6 +296,7 @@ def post_dutchlady_cn_cndtl(request):
 
 ################################# LIPTON #################################
 @api_view(['POST'])
+@track_import
 def post_lipton_item_itemuom(request):
     if request.method == 'POST':
         data = request.data
@@ -301,7 +308,7 @@ def post_lipton_item_itemuom(request):
             for i in range(0, len(data), batch_size):
                 yield data[i:i + batch_size]
         for batch in process_in_batches(data):
-            for item in batch:
+            for item in track(batch):
                 trigger_file_type = item.get('trigger_file_type')
                 if trigger_file_type == 'Purchase':
                     itemcode = item.get('item_code')
@@ -352,6 +359,7 @@ def post_lipton_item_itemuom(request):
         return JsonResponse({'request': 'POST', 'response': 'Success', 'status': status.HTTP_201_CREATED}, safe=False, status=status.HTTP_201_CREATED)
 
 @api_view(['POST'])
+@track_import
 def post_lipton_pi_pidtl_purchase(request):
     if request.method == 'POST':
         data = request.data
@@ -359,7 +367,7 @@ def post_lipton_pi_pidtl_purchase(request):
             return JsonResponse({'error': 'Invalid data format. Expected a list of JSON objects.'}, status=status.HTTP_400_BAD_REQUEST)
         
         response_list = []
-        for item in data:
+        for item in track(data):
             purchase_invoice_no = item.get('purchase_invoice_no')
             purchase_invoice_date = item.get('purchase_invoice_date')
             net_amount = item.get('net_amount')
@@ -375,6 +383,7 @@ def post_lipton_pi_pidtl_purchase(request):
     
 
 @api_view(['POST'])
+@track_import
 def post_lipton_iv_ivdtl_invoice(request):
     if request.method == 'POST':
         data = request.data
@@ -392,7 +401,7 @@ def post_lipton_iv_ivdtl_invoice(request):
         seq = 1
         delete = True
         response_list = []
-        for index,item in enumerate(data):
+        for index,item in enumerate(track(data)):
             debtor_code = item.get('debtor_code')
             debtor_name = item.get('debtor_name')
             sales_agent = item.get('sales_agent')
@@ -431,6 +440,7 @@ def post_lipton_iv_ivdtl_invoice(request):
     return JsonResponse({'request': 'POST', 'response': 'success', 'status': status.HTTP_201_CREATED}, safe=False, status=status.HTTP_201_CREATED)
 
 @api_view(['POST'])
+@track_import
 def post_lipton_cn_cndtl(request):
     if request.method == 'POST':
         data = request.data
@@ -446,7 +456,7 @@ def post_lipton_cn_cndtl(request):
         delete = True
         seq = 1
         response_list = []
-        for index,item in enumerate(data):
+        for index,item in enumerate(track(data)):
             cn_no = item.get('cn_no')
             cn_date = item.get('cn_date')
             debtor_code = item.get('debtor_code')
@@ -508,6 +518,7 @@ def post_lipton_cn_cndtl(request):
 ################################# MAMEE #################################
 
 @api_view(['POST'])
+@track_import
 def post_mamee_item_itemuom(request):
     if request.method == 'POST':
         data = request.data
@@ -515,7 +526,7 @@ def post_mamee_item_itemuom(request):
             return JsonResponse({'error': 'Invalid data format. Expected a list of JSON objects.'}, status=status.HTTP_400_BAD_REQUEST)
 
         response_list = []
-        for item in data:
+        for item in track(data):
             trigger_file_type = item.get('trigger_file_type')
 
             if trigger_file_type == 'Purchase':
@@ -563,6 +574,7 @@ def post_mamee_item_itemuom(request):
         return JsonResponse({'request': 'POST', 'response': response_list, 'status': status.HTTP_201_CREATED}, safe=False, status=status.HTTP_201_CREATED)
 
 @api_view(['POST'])
+@track_import
 def post_mamee_gr_grdtl_purchase(request):
     if request.method == 'POST':
         data = request.data
@@ -570,7 +582,7 @@ def post_mamee_gr_grdtl_purchase(request):
             return JsonResponse({'error': 'Invalid data format. Expected a list of JSON objects.'}, status=status.HTTP_400_BAD_REQUEST)
         
         response_list = [] 
-        for item in data:
+        for item in track(data):
             quantity = item.get('quantity')
             slash_count = quantity.count('/')
             delivery_no = item.get('delivery_no')
@@ -585,6 +597,7 @@ def post_mamee_gr_grdtl_purchase(request):
         return JsonResponse({'request': 'POST', 'response': response_list, 'status': status.HTTP_201_CREATED}, safe=False, status=status.HTTP_201_CREATED)
 
 @api_view(['POST'])
+@track_import
 def post_mamee_pi_pidtl_purchase(request):
     if request.method == 'POST':
         data = request.data
@@ -592,7 +605,7 @@ def post_mamee_pi_pidtl_purchase(request):
             return JsonResponse({'error': 'Invalid data format. Expected a list of JSON objects.'}, status=status.HTTP_400_BAD_REQUEST)
         
         response_list = [] 
-        for item in data:
+        for item in track(data):
             quantity = item.get('quantity')
             slash_count = quantity.count('/')
             delivery_no = item.get('delivery_no')
@@ -608,6 +621,7 @@ def post_mamee_pi_pidtl_purchase(request):
         return JsonResponse({'request': 'POST', 'response': response_list, 'status': status.HTTP_201_CREATED}, safe=False, status=status.HTTP_201_CREATED)
 
 @api_view(['POST'])
+@track_import
 def post_mamee_iv_ivdtl_invoice(request):
     if request.method == 'POST':
         data = request.data
@@ -624,7 +638,7 @@ def post_mamee_iv_ivdtl_invoice(request):
         temporary_display_term = Terms.objects.first()
         lorry_driver = 'NA'
         udf_book2 = '2'
-        for index,item in enumerate(data):
+        for index,item in enumerate(track(data)):
             debtor_code = item.get('debtor_code')
             debtor_name = item.get('debtor_name')
             invoice_no = item.get('invoice_no')
@@ -666,6 +680,7 @@ def post_mamee_iv_ivdtl_invoice(request):
         return JsonResponse({'request': 'POST', 'response': 'success', 'status': status.HTTP_201_CREATED}, safe=False, status=status.HTTP_201_CREATED)
 
 @api_view(['POST'])
+@track_import
 def post_mamee_cn_cndtl(request):
     if request.method == 'POST':
         data = request.data
@@ -681,7 +696,7 @@ def post_mamee_cn_cndtl(request):
         previous_cn_no = ''
         seq = 1
         response_list = []
-        for index,item in enumerate(data):
+        for index,item in enumerate(track(data)):
             cn_no = item.get('cn_no')
             cn_date = item.get('cn_date')
             debtor_code = item.get('debtor_code')
@@ -721,6 +736,7 @@ def post_mamee_cn_cndtl(request):
 
 ################################# DKSH #################################
 @api_view(['POST'])
+@track_import
 def post_dksh_item_itemuom(request):
     if request.method == 'POST':
         data = request.data
@@ -728,7 +744,7 @@ def post_dksh_item_itemuom(request):
             return JsonResponse({'error': 'Invalid data format. Expected a list of JSON objects.'}, status=status.HTTP_400_BAD_REQUEST)
         
         response_list = [] 
-        for item in data:
+        for item in track(data):
             trigger_file_type = item.get('trigger_file_type')
             if trigger_file_type == 'Sell':
                 item_code = item.get('item_code')
@@ -765,6 +781,7 @@ def post_dksh_item_itemuom(request):
         return JsonResponse({'request': 'POST', 'response': 'success', 'status': status.HTTP_201_CREATED}, safe=False, status=status.HTTP_201_CREATED)
 
 @api_view(['POST'])
+@track_import
 def post_dksh_gr_grdtl_purchase(request): 
     if request.method == 'POST':
         data = request.data
@@ -772,7 +789,7 @@ def post_dksh_gr_grdtl_purchase(request):
             return JsonResponse({'error': 'Invalid data format. Expected a list of JSON objects.'}, status=status.HTTP_400_BAD_REQUEST)
         
         response_list = [] 
-        for item in data:
+        for item in track(data):
             delivery_no = item.get('delivery_no')
             delivery_date = item.get('delivery_date')
             description = item.get('description')
@@ -791,6 +808,7 @@ def post_dksh_gr_grdtl_purchase(request):
         return JsonResponse({'request': 'POST', 'response': response_list, 'status': status.HTTP_201_CREATED}, safe=False, status=status.HTTP_201_CREATED)
 
 @api_view(['POST'])
+@track_import
 def post_dksh_iv_ivdtl_invoice(request): 
     if request.method == 'POST':
         data = request.data
@@ -806,7 +824,7 @@ def post_dksh_iv_ivdtl_invoice(request):
         lorry_driver = 'NA'
         udf_book2 = '2'
         response_list = [] 
-        for item in data:
+        for item in track(data):
             invoice_no = item.get('invoice_no')
             invoice_date = item.get('invoice_date')
             customer_name = item.get('customer_name')
@@ -845,6 +863,7 @@ def post_dksh_iv_ivdtl_invoice(request):
         return JsonResponse({'request': 'POST', 'response': 'success', 'status': status.HTTP_201_CREATED}, safe=False, status=status.HTTP_201_CREATED)
 
 @api_view(['POST'])
+@track_import
 def post_dksh_cn_cndtl(request): 
     if request.method == 'POST':
         data = request.data
@@ -859,7 +878,7 @@ def post_dksh_cn_cndtl(request):
         response_list = [] 
         previous_cn_no = ''
         delete =  True
-        for item in data:
+        for item in track(data):
             cn_no = item.get('cn_no')
             cn_date = item.get('cn_date')
             customer_name = item.get('customer_name')
@@ -900,6 +919,7 @@ def post_dksh_cn_cndtl(request):
     
 ################################# REDBULL #################################
 @api_view(['POST'])
+@track_import
 def post_redbull_item_itemuom(request):
     if request.method == 'POST':
         data = request.data
@@ -907,7 +927,7 @@ def post_redbull_item_itemuom(request):
             return JsonResponse({'error': 'Invalid data format. Expected a list of JSON objects.'}, status=status.HTTP_400_BAD_REQUEST)
         
         response_list = []
-        for item in data:
+        for item in track(data):
             trigger_file_type = item.get('trigger_file_type')
 
             if trigger_file_type == 'Sell':
@@ -952,6 +972,7 @@ def post_redbull_item_itemuom(request):
         return JsonResponse({'request': 'POST', 'response': 'sucess', 'status': status.HTTP_201_CREATED}, safe=False, status=status.HTTP_201_CREATED)
 
 @api_view(['POST'])
+@track_import
 def post_redbull_iv_ivdtl_invoice(request):
     if request.method == 'POST':
         data = request.data
@@ -968,7 +989,7 @@ def post_redbull_iv_ivdtl_invoice(request):
         lorry_driver = 'NA'
         udf_book2 = '2'
         response_list = []
-        for index,item in enumerate(data):
+        for index,item in enumerate(track(data)):
             debtor_code = item.get('customer_code')
             debtor_name = item.get('customer_name')
             sales_agent = item.get('sales_agent')
@@ -1010,6 +1031,7 @@ def post_redbull_iv_ivdtl_invoice(request):
         return JsonResponse({'request': 'POST', 'response': 'success', 'status': status.HTTP_201_CREATED}, safe=False, status=status.HTTP_201_CREATED)
 
 @api_view(['POST'])
+@track_import
 def post_redbull_cn_cndtl(request):
     if request.method == 'POST':
         data = request.data
@@ -1025,7 +1047,7 @@ def post_redbull_cn_cndtl(request):
         seq = 1
         delete = True
         response_list = []
-        for index,item in enumerate(data):
+        for index,item in enumerate(track(data)):
             cn_no = item.get('cn_no')
             cn_date = item.get('cn_date')
             debtor_code = item.get('debtor_code')
@@ -1078,6 +1100,7 @@ def post_redbull_cn_cndtl(request):
 ################################# COLA #################################
 
 @api_view(['POST'])
+@track_import
 def post_cola_item_itemuom(request):
     if request.method == 'POST':
         data = request.data
@@ -1085,7 +1108,7 @@ def post_cola_item_itemuom(request):
             return JsonResponse({'error': 'Invalid data format. Expected a list of JSON objects.'}, status=status.HTTP_400_BAD_REQUEST)
         
         response_list = []
-        for item in data:
+        for item in track(data):
             trigger_file_type = item.get('trigger_file_type')
             if trigger_file_type == 'Sell':
                 item_code = item.get('item_code')
@@ -1126,6 +1149,7 @@ def post_cola_item_itemuom(request):
         return JsonResponse({'request': 'POST', 'response': 'success', 'status': status.HTTP_201_CREATED}, safe=False, status=status.HTTP_201_CREATED)
 
 @api_view(['POST'])
+@track_import
 def post_cola_gr_grdtl(request):
     if request.method == 'POST':
         delivery_date = request.data.get('delivery_date')
@@ -1139,6 +1163,7 @@ def post_cola_gr_grdtl(request):
         price = request.data.get('price')
 
 @api_view(['POST'])
+@track_import
 def post_cola_iv_ivdtl_invoice(request):
     if request.method == 'POST':
         data = request.data
@@ -1156,7 +1181,7 @@ def post_cola_iv_ivdtl_invoice(request):
         delete = True
         lorry_driver='NA'
         udf_book2 = '2'
-        for i,item in enumerate(data):
+        for i,item in enumerate(track(data)):
             debtor_code = item.get('debtor_code')
             debtor_name = item.get('debtor_name')
             invoice_no = item.get('invoice_no')
@@ -1366,6 +1391,7 @@ def post_cola_iv_ivdtl_invoice(request):
         return JsonResponse({'request': 'POST', 'response': 'success', 'status': status.HTTP_201_CREATED}, safe=False, status=status.HTTP_201_CREATED)
 
 @api_view(['POST'])
+@track_import
 def post_cola_cn_cndtl(request):
     if request.method == 'POST':
         data = request.data
@@ -1382,7 +1408,7 @@ def post_cola_cn_cndtl(request):
         delete = True
         response_list = []
         del_previous_cn_no = ''
-        for i,item in enumerate(data):
+        for i,item in enumerate(track(data)):
             debtor_code = item.get('debtor_code')
             debtor_name = item.get('debtor_name')
             cn_no = item.get('cn_no')
@@ -1574,6 +1600,7 @@ def post_cola_cn_cndtl(request):
 
 ################################# MAMMY POKO #################################
 @api_view(['POST'])
+@track_import
 def post_mp_item_itemuom(request):
     if request.method == 'POST':
         data = request.data
@@ -1581,7 +1608,7 @@ def post_mp_item_itemuom(request):
             return JsonResponse({'error': 'Invalid data format. Expected a list of JSON objects.'}, status=status.HTTP_400_BAD_REQUEST)
         
         response_list = []
-        for item in data:
+        for item in track(data):
             trigger_file_type = item.get('trigger_file_type')
             if trigger_file_type == 'AddItem':
                 item_code = item.get('item_code')
@@ -1599,6 +1626,7 @@ def post_mp_item_itemuom(request):
         return JsonResponse({'request': 'POST', 'response': 'success', 'status': status.HTTP_201_CREATED}, safe=False, status=status.HTTP_201_CREATED)       
 
 @api_view(['POST'])
+@track_import
 def post_mp_iv_ivdtl_invoice(request):
     if request.method == 'POST':
         data = request.data
@@ -1615,7 +1643,7 @@ def post_mp_iv_ivdtl_invoice(request):
         seq = 1
         delete = True
         response_list = []
-        for index,item in enumerate(data):
+        for index,item in enumerate(track(data)):
             debtor_code = item.get('debtor_code')
             debtor_name = item.get('debtor_name')
             sales_agent = item.get('sales_agent')
@@ -1657,6 +1685,7 @@ def post_mp_iv_ivdtl_invoice(request):
         return JsonResponse({'request': 'POST', 'response': 'success', 'status': status.HTTP_201_CREATED}, safe=False, status=status.HTTP_201_CREATED)
 
 @api_view(['POST'])
+@track_import
 def post_mp_cn_cndtl(request):
     if request.method == 'POST':
         data = request.data
@@ -1671,7 +1700,7 @@ def post_mp_cn_cndtl(request):
         seq = 1
         delete = True
         response_list = []
-        for index,item in enumerate(data):
+        for index,item in enumerate(track(data)):
             debtor_code = item.get('debtor_code')
             debtor_name = item.get('debtor_name')
             sales_agent = item.get('sales_agent')
@@ -1714,13 +1743,14 @@ def post_mp_cn_cndtl(request):
 ################################# DOB KARA #################################
 from _lib._kara.post_item_itemuom_function import create_kara_item_itemuom_invoice
 @api_view(['POST'])
+@track_import
 def post_kara_item_itemuom(request):
     if request.method == 'POST':
         data = request.data
         if not isinstance(data, list):
             return JsonResponse({'error': 'Invalid data format. Expected a list of JSON objects.'}, status=status.HTTP_400_BAD_REQUEST)
         
-        for item in data:
+        for item in track(data):
             trigger_file_type = item.get('trigger_file_type')
             if trigger_file_type == 'AddItem':
                 item_code = item.get('item_code')
@@ -1739,6 +1769,7 @@ def post_kara_item_itemuom(request):
 from _lib._kara.post_iv_ivdtl_kara import create_kara_iv_ivdtl
 
 @api_view(['POST'])
+@track_import
 def post_kara_iv_ivdtl_invoice(request):
     if request.method == 'POST':
         data = request.data
@@ -1756,7 +1787,7 @@ def post_kara_iv_ivdtl_invoice(request):
         seq = 1
         delete = True
         response_list = []
-        for index,item in enumerate(data):
+        for index,item in enumerate(track(data)):
             debtor_code = item.get('debtor_code')
             debtor_name = item.get('debtor_name')
             sales_agent = item.get('sales_agent')
@@ -1798,6 +1829,7 @@ def post_kara_iv_ivdtl_invoice(request):
 from _lib._kara.post_cn_cndtl_kara import create_kara_cn_cndtl
 
 @api_view(['POST'])
+@track_import
 def post_kara_cn_cndtl(request): 
     if request.method == 'POST':
         data = request.data
@@ -1812,7 +1844,7 @@ def post_kara_cn_cndtl(request):
         response_list = [] 
         previous_cn_no = ''
         delete =  True
-        for item in data:
+        for item in track(data):
             cn_no = item.get('cn_no')
             cn_date = item.get('cn_date')
             customer_name = item.get('customer_name')
@@ -1858,6 +1890,7 @@ def post_kara_cn_cndtl(request):
 from _lib.dob.tohtonku.post_item_itemuom_dob_tohtonku import create_dob_tohtonku_item_iteuom
 from _lib.dob.tohtonku.post_iv_ivdtl_dob_tohtonku import create_dob_tohtonku_iv_ivdtl_invoice
 @api_view(['POST'])
+@track_import
 def post_dob_tohtonku_item_itemuom(request):
     if request.method == 'POST':
         data = request.data
@@ -1865,7 +1898,7 @@ def post_dob_tohtonku_item_itemuom(request):
             return JsonResponse({'error': 'Invalid data format. Expected a list of JSON objects.'}, status=status.HTTP_400_BAD_REQUEST)
         
         response_list = []
-        for item in data:
+        for item in track(data):
             trigger_file_type = item.get('trigger_file_type')
 
             if trigger_file_type == 'Invoice':
@@ -1883,6 +1916,7 @@ def post_dob_tohtonku_item_itemuom(request):
         return JsonResponse({'request': 'POST', 'response': 'sucess', 'status': status.HTTP_201_CREATED}, safe=False, status=status.HTTP_201_CREATED)
     
 @api_view(['POST'])
+@track_import
 def post_dob_tohtonku_iv_ivdtl_invoice(request):
     if request.method == 'POST':
         data = request.data
@@ -1900,7 +1934,7 @@ def post_dob_tohtonku_iv_ivdtl_invoice(request):
         udf_book = '3'
         response_list = []
         sales_agent = 'NA'
-        for index,item in enumerate(data):
+        for index,item in enumerate(track(data)):
             debtor_code = item.get('customer_code')
             debtor_name = item.get('customer_name')
             # sales_agent = item.get('sales_agent')
@@ -1944,6 +1978,7 @@ def post_dob_tohtonku_iv_ivdtl_invoice(request):
 from _lib.dob.yltc.post_item_itemuom_dob_yltc import create_dob_yltc_item_itemuom_invoice
 from _lib.dob.yltc.post_iv_ivdtl_dob_yltc import create_dob_yltc_iv_ivdtl_invoice
 @api_view(['POST'])
+@track_import
 def post_dob_yltc_item_itemuom(request):
     if request.method == 'POST':
         data = request.data
@@ -1951,7 +1986,7 @@ def post_dob_yltc_item_itemuom(request):
             return JsonResponse({'error': 'Invalid data format. Expected a list of JSON objects.'}, status=status.HTTP_400_BAD_REQUEST)
         
         response_list = []
-        for item in data:
+        for item in track(data):
             trigger_file_type = item.get('trigger_file_type')
 
             if trigger_file_type == 'Invoice':
@@ -1969,6 +2004,7 @@ def post_dob_yltc_item_itemuom(request):
         return JsonResponse({'request': 'POST', 'response': 'sucess', 'status': status.HTTP_201_CREATED}, safe=False, status=status.HTTP_201_CREATED)
 
 @api_view(['POST'])
+@track_import
 def post_dob_yltc_iv_ivdtl_invoice(request):
     if request.method == 'POST':
         data = request.data
@@ -1986,7 +2022,7 @@ def post_dob_yltc_iv_ivdtl_invoice(request):
         udf_book = '3'
         response_list = []
         sales_agent = 'NA'
-        for index,item in enumerate(data):
+        for index,item in enumerate(track(data)):
             debtor_code = item.get('customer_code')
             debtor_name = item.get('customer_name')
             # sales_agent = item.get('sales_agent')
@@ -2031,6 +2067,7 @@ def post_dob_yltc_iv_ivdtl_invoice(request):
 from _lib.dob.sunquick.post_item_itemuom_dob_sunquick import create_dob_sunquick_item_iteuom
 from _lib.dob.sunquick.post_iv_ivdtl_dob_sunquick import create_dob_sunquick_iv_ivdtl_invoice
 @api_view(['POST'])
+@track_import
 def post_dob_sunquick_item_itemuom(request):
     if request.method == 'POST':
         data = request.data
@@ -2038,7 +2075,7 @@ def post_dob_sunquick_item_itemuom(request):
             return JsonResponse({'error': 'Invalid data format. Expected a list of JSON objects.'}, status=status.HTTP_400_BAD_REQUEST)
         
         response_list = []
-        for item in data:
+        for item in track(data):
             trigger_file_type = item.get('trigger_file_type')
 
             if trigger_file_type == 'Invoice':
@@ -2056,6 +2093,7 @@ def post_dob_sunquick_item_itemuom(request):
         return JsonResponse({'request': 'POST', 'response': 'sucess', 'status': status.HTTP_201_CREATED}, safe=False, status=status.HTTP_201_CREATED)
     
 @api_view(['POST'])
+@track_import
 def post_dob_sunquick_iv_ivdtl_invoice(request):
     if request.method == 'POST':
         data = request.data
@@ -2073,7 +2111,7 @@ def post_dob_sunquick_iv_ivdtl_invoice(request):
         udf_book = '3'
         response_list = []
         sales_agent = 'NA'
-        for index,item in enumerate(data):
+        for index,item in enumerate(track(data)):
             debtor_code = item.get('debtor_code')
             debtor_name = item.get('debtor_name')
             # sales_agent = item.get('sales_agent')
@@ -2116,6 +2154,7 @@ def post_dob_sunquick_iv_ivdtl_invoice(request):
 from _lib.dob.mamee.post_item_itemuom_dob_mamee import create_dob_mamee_item_iteuom
 from _lib.dob.mamee.post_iv_ivdtl_dob_mamee import create_dob_mamee_iv_ivdtl_invoice
 @api_view(['POST'])
+@track_import
 def post_dob_mamee_item_itemuom(request):
     if request.method == 'POST':
         data = request.data
@@ -2123,7 +2162,7 @@ def post_dob_mamee_item_itemuom(request):
             return JsonResponse({'error': 'Invalid data format. Expected a list of JSON objects.'}, status=status.HTTP_400_BAD_REQUEST)
         
         response_list = []
-        for item in data:
+        for item in track(data):
             trigger_file_type = item.get('trigger_file_type')
 
             if trigger_file_type == 'Invoice':
@@ -2141,6 +2180,7 @@ def post_dob_mamee_item_itemuom(request):
         return JsonResponse({'request': 'POST', 'response': 'sucess', 'status': status.HTTP_201_CREATED}, safe=False, status=status.HTTP_201_CREATED)
     
 @api_view(['POST'])
+@track_import
 def post_dob_mamee_iv_ivdtl_invoice(request):
     if request.method == 'POST':
         data = request.data
@@ -2158,7 +2198,7 @@ def post_dob_mamee_iv_ivdtl_invoice(request):
         udf_book = '3'
         response_list = []
         sales_agent = 'NA'
-        for index,item in enumerate(data):
+        for index,item in enumerate(track(data)):
             debtor_code = item.get('debtor_code')
             debtor_name = item.get('debtor_name')
             invoice_no = item.get('invoice_no')
@@ -2204,13 +2244,14 @@ from _lib.dob.dksh.post_item_itemuom_dob_dksh import create_dob_dksh_item_itemuo
 from _lib.dob.dksh.post_iv_ivdtl_dob_dksh import create_dob_dksh_iv_ivdtl_invoice
 
 @api_view(['POST'])
+@track_import
 def post_dob_ecosafa_item_itemuom(request):
     if request.method == 'POST':
         data = request.data
         if not isinstance(data, list):
             return JsonResponse({'error': 'Invalid data format. Expected a list of JSON objects.'}, status=status.HTTP_400_BAD_REQUEST)
 
-        for item in data:
+        for item in track(data):
             trigger_file_type = item.get('trigger_file_type')
 
             if trigger_file_type == 'Invoice':
@@ -2228,6 +2269,7 @@ def post_dob_ecosafa_item_itemuom(request):
         return JsonResponse({'request': 'POST', 'response': 'success', 'status': status.HTTP_201_CREATED}, safe=False, status=status.HTTP_201_CREATED)
 
 @api_view(['POST'])
+@track_import
 def post_dob_ecosafa_iv_ivdtl_invoice(request):
     if request.method == 'POST':
         data = request.data
@@ -2244,7 +2286,7 @@ def post_dob_ecosafa_iv_ivdtl_invoice(request):
         seq = 1
         delete = True
 
-        for index, item in enumerate(data):
+        for index, item in enumerate(track(data)):
             debtor_code = item.get('debtor_code')
             debtor_name = item.get('debtor_name')
             invoice_no = item.get('invoice_no')
@@ -2281,13 +2323,14 @@ def post_dob_ecosafa_iv_ivdtl_invoice(request):
 
 ################################# DOB DKSH #################################
 @api_view(['POST'])
+@track_import
 def post_dob_dksh_item_itemuom(request):
     if request.method == 'POST':
         data = request.data
         if not isinstance(data, list):
             return JsonResponse({'error': 'Invalid data format. Expected a list of JSON objects.'}, status=status.HTTP_400_BAD_REQUEST)
 
-        for item in data:
+        for item in track(data):
             trigger_file_type = item.get('trigger_file_type')
 
             if trigger_file_type == 'Invoice':
@@ -2305,6 +2348,7 @@ def post_dob_dksh_item_itemuom(request):
         return JsonResponse({'request': 'POST', 'response': 'success', 'status': status.HTTP_201_CREATED}, safe=False, status=status.HTTP_201_CREATED)
 
 @api_view(['POST'])
+@track_import
 def post_dob_dksh_iv_ivdtl_invoice(request):
     if request.method == 'POST':
         data = request.data
@@ -2320,7 +2364,7 @@ def post_dob_dksh_iv_ivdtl_invoice(request):
         previous_invoice_no = ''
         delete = True
 
-        for item in data:
+        for item in track(data):
             invoice_no = item.get('invoice_no')
             invoice_date = item.get('invoice_date')
             seq = item.get('seq')
@@ -2357,6 +2401,7 @@ def post_dob_dksh_iv_ivdtl_invoice(request):
 
 
 @api_view(['POST'])
+@track_import
 def post_commission(request):
     if request.method == 'POST':
         data = request.data
@@ -2384,7 +2429,7 @@ def post_commission(request):
         filter_kara_m = CommissionItemClass.objects.filter(itemclassguid__itemclass="KARA($)").first()
         filter_kara_pallet_m = CommissionItemClass.objects.filter(itemclassguid__itemclass="KARA PALLET($)").first()
 
-        for index,item in enumerate(data):
+        for index,item in enumerate(track(data)):
             employee_id = item.get('employee_id')
             crew_name = item.get('crew_name')
             crew_type = item.get('crew_type')
@@ -2763,3 +2808,20 @@ def print_commission_list_report(request):
 
 
 
+
+
+from importjob.models import ImportJob
+
+# Polled by the upload page while a posting request with ?job=<key> runs.
+@api_view(['GET'])
+def import_progress(request):
+    job = ImportJob.objects.filter(job_key=request.query_params.get('job')).first()
+    if job is None:
+        return JsonResponse({'status': 'unknown'}, status=status.HTTP_404_NOT_FOUND)
+    return JsonResponse({
+        'status': job.status,
+        'total': job.total,
+        'processed': job.processed,
+        'started_at': job.started_at.isoformat(),
+        'error': job.error,
+    }, status=status.HTTP_200_OK)
