@@ -5,14 +5,57 @@ from itemuom.models import ItemUOM
 from datetime import datetime
 import re
 
+# The DMS report has come in two layouts: the older one has its column names on
+# row 4 with "(MYR)" price headers and dates as numbers (20260929); the newer
+# one has filter rows above, column names on row 10, shorter price headers and
+# real dates. Both are read the same way below.
+NEW_COLUMN_NAMES = {
+    'Material Group': 'Product Hierarchy Level 4',
+    'Unit Price': 'Unit Price (MYR)',
+    'Net Price': 'Net Price(MYR)',
+    'Discount Amt': 'Discount Amt (MYR)',
+}
+
+def read_mamee_sheet(file):
+    """Read the report from its column-name row, using the older column names.
+
+    Stops at the last line that has a Transaction Type, so a "Page 1 of 1"
+    footer is not read: it would turn whole-number columns such as Qty and
+    Conversion Unit into decimals or text.
+    """
+    sheet = pd.read_excel(file, header=None)
+    header_row, last_row = 3, None
+    for index, row in sheet.iterrows():
+        names = [str(value).strip() for value in row]
+        if 'Customer Code' in names:
+            header_row = index
+            if 'Transaction Type' in names:
+                last_row = sheet.iloc[header_row + 1:, names.index('Transaction Type')].last_valid_index()
+            break
+    if hasattr(file, 'seek'):
+        file.seek(0)
+    dataframe = pd.read_excel(file, header=header_row,
+                              nrows=None if last_row is None else last_row - header_row)
+    return dataframe.rename(columns={new: old for new, old in NEW_COLUMN_NAMES.items()
+                                     if new in dataframe.columns and old not in dataframe.columns})
+
+def date_number(value):
+    """20260929 for either a number date or a real date."""
+    if isinstance(value, (datetime, pd.Timestamp)):
+        return int(value.strftime('%Y%m%d'))
+    return int(value)
+
+def zero_if_blank(value):
+    return 0.0 if pd.isna(value) else value
+
 def process_mamee_invoice_file(dataframe):
     invoice = {'new_item': [], 'sales_invoice':[]}
-    dataframe = pd.read_excel(dataframe, header=3)  
+    dataframe = read_mamee_sheet(dataframe)
     store_itemcode = []
     item_uom_dict = {(item.itemcode.itemcode, item.uom): item for item in ItemUOM.objects.select_related('itemcode').all()}
 
     with pd.option_context('display.max_row', None):
-        selected_columns = dataframe[['Customer Code','Customer Name','Transaction Type','Transaction No.','Product Code','Transaction Date','Salesman','Product Hierarchy Level 4','Conversion Unit','Unit Price (MYR)','Net Price(MYR)','Discount Amt (MYR)','Qty','UOM','Selling Type']]
+        selected_columns = dataframe[['Customer Code','Customer Name','Transaction Type','Transaction No.','Product Code','Transaction Date','Salesman','Product Hierarchy Level 4','Conversion Unit','Unit Price (MYR)','Net Price(MYR)','Discount Amt (MYR)','Qty','UOM']]
 
         for index, row in selected_columns.iterrows():
             debtor_code = row['Customer Code']
@@ -26,8 +69,8 @@ def process_mamee_invoice_file(dataframe):
             rate = row['Conversion Unit']
             carton_price = row['Unit Price (MYR)']
             uom = row['UOM']
-            net_amount = row['Net Price(MYR)']
-            discount_amount = row['Discount Amt (MYR)']
+            net_amount = zero_if_blank(row['Net Price(MYR)'])
+            discount_amount = zero_if_blank(row['Discount Amt (MYR)'])
             quantity = row['Qty']
 
             item_key = (str(item_code), uom)
@@ -110,7 +153,7 @@ def process_mamee_invoice_file(dataframe):
                     'debtor_code': debtor_code,
                     'debtor_name': debtor_name,
                     'invoice_no': invoice_no,
-                    'invoice_date': int(invoice_date),
+                    'invoice_date': date_number(invoice_date),
                     'salesman': salesman,
                     'net_amount': float(net_amount),
                     'discount_amount': float(discount_amount) if isinstance(discount_amount, (int, float)) else float(str(discount_amount).replace(',', '')),
@@ -125,7 +168,7 @@ def process_mamee_invoice_file(dataframe):
     return JsonResponse(invoice, safe=False, status=status.HTTP_200_OK)
 
 def process_mamee_cn_file(dataframe):
-    dataframe = pd.read_excel(dataframe, header=3)
+    dataframe = read_mamee_sheet(dataframe)
     dataframe = dataframe.dropna(how='all')
 
     cn = {'new_item': [], 'cn': []} 
@@ -148,8 +191,8 @@ def process_mamee_cn_file(dataframe):
             description = row['Product Hierarchy Level 4']
             rate = row['Conversion Unit']
             carton_price = row['Unit Price (MYR)']
-            net_amount = row['Net Price(MYR)']
-            discount_amount = row['Discount Amt (MYR)']
+            net_amount = zero_if_blank(row['Net Price(MYR)'])
+            discount_amount = zero_if_blank(row['Discount Amt (MYR)'])
             quantity = row['Qty']
             uom = row['UOM']
 
@@ -232,7 +275,7 @@ def process_mamee_cn_file(dataframe):
 
                 cn['cn'].append({
                     'cn_no': cn_no,
-                    'cn_date': str(int(cn_date)),
+                    'cn_date': str(date_number(cn_date)),
                     'debtor_code': debtor_code,
                     'debtor_name': debtor_name,
                     'item_code': item_code,
