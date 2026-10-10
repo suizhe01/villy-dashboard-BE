@@ -8,6 +8,7 @@ from transactiondtl.models import TransactionDtl
 from itemclass.models import ItemClass
 from _lib.panda import panda_uuid
 from _lib.commission_filters import NON_COMMISSIONABLE_RB_SQL
+from _lib.calculate_commission_by_date.loose_to_carton import CartonRates, LOOSE_TO_CARTON_CLASSES, CARTON_UOM
 from itemuom.models import ItemUOM
 from item.models import Item
 from decimal import Decimal
@@ -230,7 +231,7 @@ def update_transactiondtl_kara_ispallet_itemclass(start_date, end_date):
 
 def update_transactiondtl_qty(start_date, end_date):
     query = """
-    SELECT a.TransactionDtlGuid ,a.UdfCalMethod, a.UdfCalRate, qty, a.isqtyupdated, a.uom, a.itemclass
+    SELECT a.TransactionDtlGuid ,a.UdfCalMethod, a.UdfCalRate, qty, a.isqtyupdated, a.uom, a.itemclass, a.ItemCode
     FROM autocount_dashboard.transactiondtl AS a
     INNER JOIN autocount_dashboard.transaction AS b
         ON a.transactionguid = b.TransactionGuid
@@ -244,8 +245,9 @@ def update_transactiondtl_qty(start_date, end_date):
         update_qty = cursor.fetchall()
     
     update_new_qty = []
+    carton_rates = CartonRates()
     for update in update_qty:
-        transactiondtl_guid, udf_calmethod, udf_calrate, qty, isqty_updated, uom, itemclass = update
+        transactiondtl_guid, udf_calmethod, udf_calrate, qty, isqty_updated, uom, itemclass, item_code = update
 
         # Every conversion runs once per line. The SUNQUICK one used to sit
         # outside this check, so each run divided the same line by 6 again
@@ -257,6 +259,12 @@ def update_transactiondtl_qty(start_date, end_date):
             elif udf_calmethod:
                 new_qty = qty*udf_calrate
                 update_new_qty.append((transactiondtl_guid,new_qty))
+            elif itemclass in LOOSE_TO_CARTON_CLASSES and uom != CARTON_UOM:
+                # A line that cannot be converted keeps IsQtyUpdated = 0, so it
+                # is converted on a later run once its CTN rate exists.
+                new_qty = carton_rates.cartons(item_code, uom, qty)
+                if new_qty is not None:
+                    update_new_qty.append((transactiondtl_guid,new_qty))
 
     for transactiondtl_guid,new_qty in update_new_qty:
             TransactionDtl.objects.filter(transactiondtlguid=transactiondtl_guid).update(qty=new_qty,isqtyupdated=1)

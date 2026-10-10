@@ -2,10 +2,19 @@ from weasyprint import HTML
 from django.template.loader import render_to_string
 from django.http import HttpResponse
 from collections import defaultdict
-from decimal import Decimal
+from decimal import Decimal, ROUND_HALF_UP
 from django.db import connections
 from weasyprint import HTML, CSS
 from _lib.commission_filters import NON_COMMISSIONABLE_RB_SQL
+
+def format_ctn(qty):
+    """Carton count for the CTN column: up to 2 decimals, no trailing zeros.
+
+    Loose units converted to cartons are fractional (1,000 bottles of a 12-pack
+    are 83.33 CTN); printing int(qty) used to cut that to 83.
+    """
+    text = format(Decimal(qty).quantize(Decimal('0.01'), rounding=ROUND_HALF_UP), 'f')
+    return text.rstrip('0').rstrip('.') if '.' in text else text
 
 def list_report(lorry_number, document_date, employee_details, invoice_list_no, generator_name=None):
     # print(document_date, invoice_list_no)
@@ -82,12 +91,12 @@ def list_report(lorry_number, document_date, employee_details, invoice_list_no, 
 
             if is_ecosafa:
                 if qty:
-                    group["ctn_parts"].append(f"{int(qty)} ECOSAFA(Q)")
+                    group["ctn_parts"].append(f"{format_ctn(qty)} ECOSAFA(Q)")
             else:
                 if commtype == "%":
                     group["amount"] += subtotal
                 if commtype == "$" and itemclass != "N/A" and qty and qty > 0:
-                    group["ctn_parts"].append(f"{int(qty)} {itemclass}")
+                    group["ctn_parts"].append(f"{format_ctn(qty)} {itemclass}")
 
     final_rows = []
     for doc in grouped.values():
